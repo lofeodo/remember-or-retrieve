@@ -1,0 +1,12 @@
+# Remember or Retrieve — pipeline configuration
+# Later steps append their own sections (training, registry, serving, ...).
+
+corpus:
+  source: osrs_wiki
+  license: CC BY-NC-SA 3.0
+  user_agent: "remember-or-retrieve/0.1 (portfolio project; contact: daniel.lofeodo@gmail.com)"
+
+data:
+  corpus_path: data/corpus/chunks.jsonl
+  golden_set_path: data/eval/golden_set.json
+  provenance_path: data/PROVENANCE.json
