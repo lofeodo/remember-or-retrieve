@@ -10,7 +10,7 @@ which was a starting point only. Each step is one feature branch and goes throug
 plan-then-approve cycle (workflow rules 2 to 8 in `CLAUDE.md`) before any of it is implemented. "Free"
 means no cloud or API spend.
 
-- [ ] **Step 1 — Repo scaffold** (`feat/scaffold`, free)
+- [x] **Step 1 — Repo scaffold** (`feat/scaffold`, free)
 - [ ] **Step 2 — Compute plan, GCP bootstrap, GPU quota** (`feat/compute-plan`, free)
 - [ ] **Step 3 — Training data generation** (`feat/training-data`, ~$2 to $4 Claude API)
 - [ ] **Step 4 — Scoring harness and reward functions** (`feat/scoring-harness`, under $1 judge calls)
@@ -138,7 +138,7 @@ with real deviations as the step is implemented.
 
 ### Step 1 — Repo scaffold (`feat/scaffold`, free)
 
-Plan approved 2026-10-09. Status: in progress.
+Plan approved 2026-10-09. Status: complete (implemented as planned, no scope deviations).
 
 **Context.** Every later branch builds on this one, so it stays small and free: package
 skeleton, tooling, CI, and the corpus and golden set brought in from `rag-with-receipts`
@@ -183,3 +183,13 @@ set renamed `golden_set.json`; minimal dependencies now.
 
 **Verification.** `ruff check`, `ruff format --check`, `pytest` green, `verify_data.py`
 exits 0, CI passes on GitHub. Spend stays $0; nothing paid exists, so no teardown.
+
+**Implementation notes (small additions beyond the plan).**
+
+- Added `.gitattributes` (`data/** -text`, LF elsewhere). Without it, git's CRLF conversion
+  on Windows would change the data files' bytes and break the SHA-256 check against Linux CI.
+- CI runs on pull requests and pushes to `main`, and also runs `scripts/verify_data.py`.
+- Local results: ruff clean, 12 tests passing, `verify_data.py` OK.
+- Recorded checksums: `chunks.jsonl` `2b245aed...`, `golden_set.json` `ec89e698...`
+  (full values in `data/PROVENANCE.json`).
+- Spend: $0. Nothing paid was provisioned, so there is no teardown to confirm.
