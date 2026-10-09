@@ -10,3 +10,23 @@ data:
   corpus_path: data/corpus/chunks.jsonl
   golden_set_path: data/eval/golden_set.json
   provenance_path: data/PROVENANCE.json
+
+compute:
+  # Decided in step 2 (see docs/compute-plan.md). Prices are us-central1 spot, USD/hr,
+  # verified against the GCP Billing Catalog on 2026-10-09.
+  base_model: Qwen/Qwen3-8B # 8.2B, Apache-2.0
+  train_machine: a2-highgpu-4g # 4x A100 40GB
+  train_gpu_count: 4
+  strategy:
+    full_finetune: fsdp_full_shard
+    lora: ddp
+  spot_usd_per_hour: 8.82
+  on_demand_usd_per_hour: 14.69
+  regions: [us-central1, us-east1, europe-west4]
+  fallback_machine: a2-ultragpu-4g # 4x A100 80GB, spot 12.17/hr
+  jax_model: null # chosen and verified in step 7 (Gemma 2B to 4B class; gated on Hugging Face)
+
+budget:
+  target_usd: 20
+  cap_usd: 50
+  expected_usd: 34

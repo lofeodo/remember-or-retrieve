@@ -32,3 +32,6 @@ mlruns/
 
 # Playwright MCP artifacts
 .playwright-mcp/
+
+# Terraform lock files are committed; local plan output is not
+*.tfplan
