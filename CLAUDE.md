@@ -35,13 +35,14 @@ that reason, not scope creep for its own sake.
 | Area | Decision |
 |---|---|
 | Budget | **$20 is the target, $50 is the hard cap.** Lower is always better than higher, and $20 is what to aim for when sizing the model and the GPU plan, but spending up to $50 is acceptable if that's what a genuinely distributed run and a short GKE serving window actually cost. Every paid resource (GPU rental, a GKE node pool, Vertex AI Model Registry, anything with a dollar cost) must have its estimated cost stated and approved before it's provisioned, running total against both the $20 target and the $50 ceiling, and torn down immediately once its measurement is done. There is no local-training fallback in this version of the plan (see Base model and Training infrastructure below), so essentially the whole training budget comes out of one deliberately bounded GCP GPU window — pick the model size and GPU count against this constraint explicitly, not assumed. If the training run and the GKE serving step together would cross $50, cut the GKE serving step down to the shortest possible live window before cutting the model size or faking the distributed-training setup, since both of those are the actual point of this change. |
+| GCP project | **Decided 2026-10-09:** a new, dedicated `remember-or-retrieve` project under the `daniel.lofeodo@gmail.com` account, not the existing `rag-with-receipts` project, so spend is cleanly attributable to this budget and a `terraform destroy` here can never touch the live RAG service. The development machine's default gcloud login is a different account (`latentspacemail@gmail.com`) used for unrelated work in parallel: do not switch the default account. Use a separate named gcloud configuration for this project, and only create it when step 2 is underway and the user says so. |
 | Infrastructure as code | Terraform, covering everything that costs money or takes more than a couple of commands to stand up: the GKE cluster and its GPU node pool, the storage bucket for checkpoints, and the model registry if it needs its own resources. This also doubles as a budget safeguard: a `terraform destroy` after each paid step guarantees nothing paid is left running by accident, which matters more here than in the other two projects given how little room this budget has for a provisioning mistake. |
 | Corpus and eval set | Reused as-is from `rag-with-receipts`: the 955-chunk OSRS corpus and the 55-question golden set (35 single-hop, 15 multi-hop, 5 unanswerable). No changes to either without a documented reason. |
 | Base model | **No longer capped at 1-8B.** Since training now happens once, distributed, on rented GCP GPUs rather than locally, pick the largest instruct model that fits comfortably inside the training-run cost estimate below (realistically something in the 13-34B range, depending on what the costed GPU plan actually supports) rather than defaulting to a small model out of local-hardware habit. The exact size is decided when this step is planned, against a real cost estimate, not assumed here. |
 | Training data | Question/answer pairs generated from the corpus chunks using Claude at build time only (never at inference time), the same "LLM at training time, zero at inference" split as the clinical guideline compiler project. Held strictly separate from the 55-question golden set, which is eval-only and never used for training. |
 | Training infrastructure | **One fine-tuning run, not two.** All training (SFT, LoRA, DPO, RL) happens on rented GCP GPUs, provisioned via Terraform, and it must be genuinely distributed, not just "running on a machine that happens to have several GPUs." Renting a multi-GPU instance and running an ordinary single-process training script on it is **not** distributed training, even if multiple GPUs are present and billed. The run has to actually use a parallelization strategy that splits the work across devices and synchronizes it: data parallelism (PyTorch DDP, with gradient all-reduce) and, if the chosen model is large enough that it doesn't comfortably fit on one GPU for full fine-tuning, model/parameter sharding (FSDP or DeepSpeed ZeRO) on top of or instead of DDP. Which of these applies depends on the model size picked in this step, and should be decided together with it, not as an afterthought. Before trusting the run, verify it's actually distributed the way Step 6 of `rag-with-receipts` verified its NLI label order empirically rather than assuming it: confirm multiple ranks/processes actually started, that GPU utilization shows up on every device during training (not just one), and that the loss curve looks like one coherent run rather than several independent ones. There is no separate local run and no separate disconnected "distributed training benchmark" for its own sake: the distributed run itself produces the real checkpoints that go on to the registry and serving, and its own timing/throughput numbers (vs. a quick single-GPU reference run on the same hardware tier, if that's affordable within the budget) are reported as a real measurement. This is the project's biggest cost item, so the GPU count, tier, parallelization strategy, and expected training wall-clock time must all be estimated and approved before provisioning, per the budget row above. |
 | Distributed training framework | **Ray** (Ray Train) orchestrating the PyTorch DDP/FSDP job across the rented GPUs, rather than a bare `torchrun` launch script. This is a deliberate choice, not just "use PyTorch's own launcher": Ray is the orchestration framework named explicitly in the kind of post-training role this project is aimed at, and using it (rather than only the lower-level PyTorch primitives) is itself a signal worth having in the README and the code, not just in a bullet point. **Slurm**, the other infrastructure named in those roles, is a deliberate gap this project does not close: standing up a real Slurm cluster is HPC-scheduler infrastructure disproportionate to a single-tenant budget project, and faking it would be worse than naming the gap plainly. Say this openly in the README rather than quietly using Ray and hoping nobody asks about Slurm. |
-| Framework coverage (JAX/XLA) | **Open question, not decided here.** The training stack above is PyTorch end to end (DDP/FSDP, Ray Train, Hugging Face TRL for SFT/LoRA/DPO/GRPO). Some post-training roles also name JAX and XLA/MLIR explicitly. Adding a real JAX-based component (even a small one, like reimplementing the RL reward scoring or one training stage in JAX) is possible but is genuinely extra scope and extra cost, not a small add-on, and would need its own planned step and its own cost estimate against the budget. Flagging this here rather than silently deciding either way: if JAX exposure matters enough to be worth the added scope, say so before the training step is planned so it can be designed in from the start rather than retrofitted. |
+| Framework coverage (JAX/XLA) | **Decided 2026-10-09: add JAX, on rented GPUs.** The main training stack stays PyTorch end to end (DDP/FSDP, Ray Train, Hugging Face TRL for SFT/LoRA/DPO/GRPO). On top of it, one real JAX component: a JAX LoRA fine-tune of a small model (2B to 4B class, most likely a Gemma, which has a maintained JAX implementation) on the same training data, run in the same rented GPU window as the PyTorch stages, split across the GPUs with JAX's own multi-device data parallelism, XLA-compiled, and profiled against the PyTorch SFT stage. It is a smaller model than the main one because there is no cheap, maintained JAX path for loading a 13B+ instruct model's pretrained weights; say so in the README rather than implying parity. The exact model is verified when the step is planned, not assumed here. Estimated cost: $1 to $3 on spot GPUs, $3 to $8 on demand (roughly 20 to 40 extra minutes of the training window, no second provisioning). It has its own code step (step 7) and runs inside the training run (step 9). |
 | Performance profiling | Every training stage (SFT, LoRA/full comparison, DPO, RL) is profiled, not just timed end to end: tokens/sec, memory per device, and for the RL stage specifically, rollout generation throughput (since that's usually the actual bottleneck in RL post-training, not the gradient step). This is a direct answer to "performance optimization" being named explicitly in the target roles, and it reuses the same measured, honestly-reported discipline as `rag-with-receipts`'s per-stage latency work rather than introducing a new style of reporting. |
 | Fine-tuning methods | SFT first (establishes the baseline capability on the larger model), then LoRA specifically compared against a fuller fine-tune (the point is to be able to speak to the LoRA-vs-full tradeoff from a real measurement, not just the term), then DPO on top, using preference pairs built to specifically target hallucination and verbosity, the same failure modes the RAG project's grounding checker measures. **Then an RL post-training stage on top of DPO** (see the row below) — the project should not stop at SFT/DPO, since going through an actual RL regime is specifically what separates "fine-tuned a model" from "did post-training the way a frontier lab does it." All four stages happen within the same rented GPU window rather than across separate sessions, to avoid paying to re-provision multiple times. |
 | RL post-training | **GRPO (Group Relative Policy Optimization), not PPO, as the default choice.** GRPO needs no separate learned reward model or value network, which matters a lot at this budget: it generates a group of candidate completions per prompt and scores them directly, so the reward signal can be the project's own existing scorers (correctness against the training-time Q/A pairs, plus the grounding/hallucination checker's signal from `rag-with-receipts`, reused rather than reinvented) instead of training a whole separate reward model from scratch. PPO is the textbook alternative and worth naming in the README as the road not taken, with the real reason (reward-model cost, more moving parts, more rollouts) stated plainly rather than hand-waved. RL rollouts are the most compute-hungry part of the whole project (multiple generations per prompt, every stage), so this step's prompt count and group size must be scoped tightly and costed explicitly before it runs, smaller and cheaper than it would be in a non-budget-constrained setting, and that tradeoff should be stated openly rather than hidden. |
@@ -63,6 +64,8 @@ even if a later step seems obvious or quick.
    branch. Present this roadmap to the user before doing anything else. The "Candidate
    step breakdown" below is a starting point for this roadmap, not the roadmap itself —
    refine, reorder, split, or merge it as the real design calls for, and say so.
+   *(Done 2026-10-09: the approved roadmap is the "Roadmap" section below, which replaced
+   the candidate breakdown and records what changed from it.)*
 2. **To start a step:** the user says so explicitly. Enter plan mode. Write a detailed,
    in-depth design and implementation plan for that step, and that step only — do not
    plan ahead into future steps. Present the plan for the user's approval.
@@ -95,38 +98,141 @@ even if a later step seems obvious or quick.
    (mirror the explicit teardown confirmations in `rag-with-receipts`'s CLAUDE.md), and
    never leave a billable resource running "just in case" between steps.
 
-## Candidate step breakdown (starting point for the real roadmap)
+## Roadmap
 
-1. **Repo scaffold and this file.**
-2. **Training data generation** — Claude-generated Q/A pairs from the corpus chunks, kept
-   strictly separate from the golden eval set.
-3. **Terraform for the training infrastructure** — the rented/distributed GCP GPU setup
-   (instance type, count, networking) codified before any training happens, so it can be
-   provisioned and torn down with one command and the run doesn't idle on the clock.
-4. **Distributed SFT, LoRA, and DPO — one costed training run** — base model picked and
-   its cost estimated against the budget, then SFT, the LoRA-vs-full comparison, and DPO
-   all run within that same provisioned GPU window, orchestrated with Ray Train over
-   PyTorch DDP/FSDP, with real single- vs multi-GPU throughput and memory numbers
-   captured as part of this run rather than as a separate benchmark.
-5. **RL post-training (GRPO)** — the reward signal built from the project's own
-   correctness and grounding scorers rather than a separately trained reward model,
-   group rollouts sized tightly against the budget, rollout throughput profiled
-   specifically since that's the likely bottleneck. Runs in the same provisioned GPU
-   window as step 4, torn down once this step is also done.
-6. **Model registry** — every checkpoint (including the RL one) logged with its eval
-   score as it's produced, not retrofitted at the end.
-7. **Terraform for the serving infrastructure** — the GKE cluster, GPU node pool, and
-   checkpoint storage bucket, codified separately from step 3's training infra since the
-   two are provisioned and torn down at different times.
-8. **Serving on GKE** — the winning checkpoint behind a GPU-backed deployment,
-   provisioned via step 7's Terraform, benchmarked, then torn down.
-9. **Comparison harness** — running the same 55-question golden set through the
-   fine-tuned model, the live `rag-with-receipts` API, and the Mistral and Cohere
-   off-the-shelf baselines, all scored the same way.
-10. **User-facing interface** — the side-by-side demo, hosted on GCP, using recorded
-    comparison results rather than a live GPU endpoint if keeping one running would
-    exceed the budget.
-11. **README polish** — see below.
+Approved 2026-10-09. This replaces the original "Candidate step breakdown" (11 steps),
+which was a starting point only. Each step is one feature branch and goes through its own
+plan-then-approve cycle (workflow rules 2 to 8) before any of it is implemented. "Free"
+means no cloud or API spend.
+
+- [ ] **Step 1 — Repo scaffold** (`feat/scaffold`, free)
+- [ ] **Step 2 — Compute plan, GCP bootstrap, GPU quota** (`feat/compute-plan`, free)
+- [ ] **Step 3 — Training data generation** (`feat/training-data`, ~$2 to $4 Claude API)
+- [ ] **Step 4 — Scoring harness and reward functions** (`feat/scoring-harness`, under $1 judge calls)
+- [ ] **Step 5 — Distributed training pipeline: SFT, LoRA vs full, DPO** (`feat/training-pipeline`, free)
+- [ ] **Step 6 — GRPO stage** (`feat/grpo`, free)
+- [ ] **Step 7 — JAX training stage** (`feat/jax-stage`, free)
+- [ ] **Step 8 — Training infrastructure and model registry** (`feat/training-infra`, under $1)
+- [ ] **Step 9 — The training run** (`feat/training-run`, ~$11 to $28, the main cost)
+- [ ] **Step 10 — Comparison harness and API baselines** (`feat/comparison-harness`, ~$1 to $2)
+- [ ] **Step 11 — Serving infrastructure** (`feat/serving-infra`, free)
+- [ ] **Step 12 — Serving on GKE** (`feat/gke-serving`, ~$2 to $5)
+- [ ] **Step 13 — User-facing demo** (`feat/demo-ui`, ~$0)
+- [ ] **Step 14 — README** (`feat/readme`, free)
+
+### What each step is, and why it is its own step
+
+1. **Repo scaffold.** Package skeleton, `pyproject.toml`, config, lint and test setup, CI,
+   license, README stub, and the corpus and golden set brought in pinned to a
+   `rag-with-receipts` commit with checksums. Its own step because every later branch
+   builds on it.
+2. **Compute plan, GCP bootstrap, GPU quota.** Picks the base model, GPU tier and count,
+   parallelization strategy (DDP, FSDP, or both), and expected wall-clock, with a cost
+   table for approval. Creates the project, enables APIs, sets billing alerts at $20 and
+   $50 through Terraform, and files the GPU quota request. Its own step because everything
+   paid depends on it and the quota wait should overlap the free steps.
+3. **Training data generation.** Claude-generated Q/A pairs from the 955 chunks
+   (single-hop, multi-hop, and out-of-corpus questions so the model learns to abstain),
+   the DPO preference pairs targeting hallucination and verbosity, and the GRPO prompt
+   set. Includes an automated leakage check against the 55 golden questions. Its own step
+   because it is the only build-time LLM dependency and its output is frozen before
+   training.
+4. **Scoring harness and reward functions.** One way to score any system on the golden
+   set: the judge and grounding checker reused from `rag-with-receipts`, plus a fast local
+   reward for GRPO. Validated by re-scoring the RAG project's recorded answers and
+   checking the result against its published numbers. Its own step because training,
+   registry, and comparison all depend on identical scoring.
+5. **Distributed training pipeline.** Ray Train over PyTorch DDP/FSDP for SFT, the
+   LoRA-vs-full comparison, and DPO, with per-stage profiling (tokens/sec, memory per
+   device) and the distribution checks (ranks started, every GPU busy, one coherent loss
+   curve). Code only, smoke-tested on a tiny model locally. No real checkpoint is produced
+   here.
+6. **GRPO stage.** The RL stage on top of DPO: group rollouts, reward from step 4,
+   rollout-throughput profiling, prompt count and group size costed. Code only,
+   smoke-tested. Separate from step 5 because rollouts are a different bottleneck and a
+   different failure mode.
+7. **JAX training stage.** A JAX LoRA fine-tune of a small model on the same training
+   data (see the Framework coverage row in Locked decisions). Code only, smoke-tested.
+   Separate because it is a second framework with its own dependencies.
+8. **Training infrastructure and model registry.** Terraform for the GPU machines, the
+   Ray cluster, networking, and the checkpoint bucket, plus the Vertex AI Model Registry
+   logging code. Validated with `terraform plan` and a dummy registry entry. A rehearsal
+   of a few minutes on the cheapest GPUs, to prove the cluster and multi-rank launch work
+   before the real window, is to be proposed in this step's plan.
+9. **The training run.** The one paid window: provision, verify it is really distributed,
+   take the single-GPU reference number, run SFT, LoRA vs full, DPO, GRPO, and the JAX
+   stage, score and register every checkpoint, promote the winner, `terraform destroy`,
+   confirm teardown here.
+10. **Comparison harness and API baselines.** The golden set through the live
+    `rag-with-receipts` API, a Mistral model, and a Cohere model, all scored by step 4,
+    plus the client for the fine-tuned endpoint tested against a stub.
+11. **Serving infrastructure.** Terraform for the GKE cluster, the autoscaling GPU node
+    pool, and the vLLM deployment manifests. `terraform plan` only.
+12. **Serving on GKE.** Provision, deploy the winner, run the fine-tuned leg of the
+    harness through the live endpoint, benchmark latency and throughput, exercise
+    autoscaling, record answers for the demo, destroy, confirm teardown here.
+13. **User-facing demo.** Side-by-side page on Cloud Run (scales to zero). The fine-tuned
+    side uses recorded answers unless a live endpoint fits the budget. That tradeoff is
+    raised in this step's plan.
+14. **README.** To the README bar below, including the Slurm gap and PPO as the road not
+    taken.
+
+### Changes from the candidate breakdown
+
+| Change | Reason |
+|---|---|
+| New step 2: compute plan, GCP bootstrap, GPU quota | A new GCP project starts with zero GPU quota and approval can take days. The request needs the GPU type, which needs the model size. So the model and GPU decision moves ahead of training code instead of being made when training is planned. |
+| New step 4: scoring harness | Every checkpoint must be scored on the golden set as it is produced, and GRPO's reward reuses the same scorers. Both need the harness to exist before the GPU window. |
+| Training split into code (5, 6, 7) and one paid run (9) | All stages share one GPU window. Every stage has to be written and smoke-tested on a tiny model before the meter starts. |
+| Registry merged into training infra (8) | "Logged as it is produced" means the registry must exist before the run. |
+| Comparison harness (10) moved ahead of GKE serving (12) | The harness must be ready to fire the moment the GPU node pool is up. The three API baselines get scored for real before any GKE cost. |
+| New step 7: JAX stage | JAX coverage was decided in favor on 2026-10-09 (see Locked decisions). |
+
+### Budget envelope (provisional)
+
+Prices are from memory and are re-checked against live GCP pricing in step 2, which turns
+this into a real estimate for approval before anything is provisioned. Claude, Mistral,
+and Cohere API spend counts against the budget.
+
+| Item | Low | High |
+|---|---|---|
+| Claude API: data generation and judging (steps 3, 4, 9, 10) | $3 | $7 |
+| Training window, PyTorch stages (step 9) | $10 | $20 |
+| JAX stage, same window (step 9) | $1 | $8 |
+| Infra rehearsal (step 8) | $0 | $1 |
+| Mistral and Cohere APIs (step 10) | under $1 | $1 |
+| GKE serving window (step 12) | $2 | $5 |
+| **Total** | **~$16** | **~$42** |
+
+The $20 target is only reachable with spot GPUs and a model at the small end of the 13B
+to 34B range. A realistic landing zone is $25 to $35, inside the $50 cap.
+
+**Spend to date: $0.** Nothing has been provisioned.
+
+### Known risks
+
+- **GPU quota** on a new project is the main schedule risk, and a denial would force a
+  different GPU tier. This is why step 2 comes so early.
+- **"Full" fine-tune of a 13B+ model** needs roughly 100 GB or more of GPU memory. Step 2
+  decides whether that means FSDP across large GPUs or a defined partial unfreeze, and
+  says so openly.
+- **Grounding for a closed-book model.** The RAG grounding checker tests a claim against a
+  cited chunk. The fine-tuned model cites nothing, so step 4 has to define what its
+  grounding score is measured against.
+- **The live RAG API** is gated by a demo key and limited to 10 requests per 5 minutes per
+  IP. Step 10 needs the key and a paced run or a temporary limit change.
+- **Leakage.** Training questions cover the same facts as the golden set by design. Only
+  the golden questions themselves are excluded. The README will say this plainly.
+- **Local tooling.** Terraform is not installed on the development machine, and its Python
+  is 3.14 (`rag-with-receipts` used 3.11). Steps 1 and 2 settle both.
+
+## Step detail
+
+Each step's approved plan is copied here in full when it is approved, then kept current
+with real deviations as the step is implemented.
+
+*No step has been planned yet.*
+
 
 ## README bar (for the final step)
 
