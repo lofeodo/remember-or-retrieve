@@ -109,8 +109,9 @@ and Cohere API spend counts against the budget.
 | GKE serving window (step 12) | $2 | $5 |
 | **Total** | **~$16** | **~$42** |
 
-The $20 target is only reachable with spot GPUs and a model at the small end of the 13B
-to 34B range. A realistic landing zone is $25 to $35, inside the $50 cap.
+**Superseded by step 2:** with live spot prices and the 8B model, the estimate is ~$23 low,
+~$34 expected, ~$49 high (full table in [`compute-plan.md`](compute-plan.md)). The $20 target
+is not reachable for a genuinely distributed run; the $50 cap holds in every case.
 
 **Spend to date: $0.** Nothing has been provisioned.
 
@@ -193,3 +194,74 @@ exits 0, CI passes on GitHub. Spend stays $0; nothing paid exists, so no teardow
 - Recorded checksums: `chunks.jsonl` `2b245aed...`, `golden_set.json` `ec89e698...`
   (full values in `data/PROVENANCE.json`).
 - Spend: $0. Nothing paid was provisioned, so there is no teardown to confirm.
+
+### Step 2 — Compute plan, GCP bootstrap, GPU quota (`feat/compute-plan`, free)
+
+Plan approved 2026-10-09. Status: in progress. Part A (compute plan) done: `docs/compute-plan.md`, `compute:` and
+`budget:` config sections, and a consistency test. Deviation from the plan: live prices
+made a 14B full fine-tune too tight against the cap, so the user chose Qwen3-8B on 4x A100
+40GB (`a2-highgpu-4g`); `CLAUDE.md`'s Base model row was amended. Part B (GCP bootstrap)
+waits for the user's go-ahead.
+
+**Context.** Everything paid depends on the model size, GPU tier and count, and
+parallelism strategy, and a new GCP project starts with zero GPU quota (approval can take
+days; new Gmail-account projects are sometimes denied). This step decides the compute plan
+on paper, then creates the project and files the quota request early so the wait overlaps
+steps 3 to 8. Cost of this step: $0 (running total $0 of the $20 target and $50 cap).
+
+**Heads-up rule for the GCP project.** The default gcloud login is
+`latentspacemail@gmail.com`, used for unrelated parallel work, and is never changed. Part B
+uses a separate named gcloud configuration (`remember-or-retrieve`) passed explicitly as
+`--configuration=remember-or-retrieve` on every command. `gcloud auth login` is interactive,
+so the user runs it. The user is told before any GCP command runs. Part A makes no GCP
+contact.
+
+**Part A — Compute plan (no cloud contact).**
+
+1. Verify live prices from cloud.google.com (A100 80GB, H100, L4; spot and on-demand;
+   per region). Third-party figures are not trusted.
+2. Pick the model against the cost table. Recommendation: a ~14B instruct (Qwen family,
+   Apache-2.0; exact checkpoint verified on Hugging Face). 14B keeps full fine-tuning
+   feasible via FSDP with a short window; 32B roughly doubles GPU-hours and pushes toward
+   the $50 cap.
+3. Parallelism for 14B: full fine-tune needs roughly 16 bytes/param (~220 GB with optimizer
+   state), so FSDP full-shard across 4x A100-80GB (320 GB); LoRA under DDP; DPO and GRPO as
+   LoRA-on-FSDP or DDP as measured. Orchestrated by Ray Train. A single-GPU reference run on
+   the same tier for the throughput comparison.
+4. Cost table (low/high, spot vs on-demand) for SFT, LoRA vs full, DPO, GRPO (prompt count x
+   group size stated), the JAX stage (2 to 4B Gemma), the single-GPU reference, and
+   setup/idle overhead, with running total vs $20 and $50. Includes a cut order: GKE window
+   first, then GRPO size, never the distributed setup.
+5. Fallback tiers if A100-80GB quota is denied: 8x A100-40GB, 8x L4 (LoRA only), H100, each
+   with its changed model size and cost.
+6. Outputs: `docs/compute-plan.md` (decision record and cost table), a `compute:` section in
+   `config/config.yaml`, and a small test that it loads and the budget numbers are
+   consistent (target <= cap). Update this roadmap's budget envelope.
+
+**Part B — GCP bootstrap (after go-ahead).**
+
+1. Install Terraform (pinned version).
+2. The user runs `gcloud auth login` for `daniel.lofeodo@gmail.com`; the named configuration
+   is created.
+3. Create project `remember-or-retrieve`, link billing (the billing account ID is never
+   printed or committed), enable APIs: compute, container, aiplatform, secretmanager,
+   storage, billingbudgets, cloudresourcemanager, serviceusage.
+4. Terraform in `infra/bootstrap/`: billing budget with alerts at $20 and $50 and API
+   enablement as code; account ID and email via untracked tfvars or env; `*.tfvars` and
+   state gitignored. `terraform plan` shown before `apply`.
+5. Quota requests: spot A100-80GB (4, ideally 8) in 2 to 3 regions with matching vCPU quota,
+   plus one serving GPU for GKE later. Request IDs and status recorded here (no secrets).
+6. If Google denies on a free-trial account, upgrading to a paid account is the usual fix;
+   this is flagged to the user, not done automatically.
+
+**Security.** No credentials read or committed. Billing account ID and alert email stay out
+of the repo. Only the listed APIs; no service-account keys created; no public endpoints; no
+IAM grants beyond the user's own ownership.
+
+**Paid / teardown.** Nothing billable is created (budgets and quotas are free). Spend $0,
+nothing to tear down.
+
+**Verification.** `pytest`, `ruff check`, `ruff format --check` pass and CI is green;
+`terraform validate` and `terraform plan` clean; after apply, the budgets list shows the $20
+and $50 alerts and the enabled APIs list shows the APIs; quota requests visible with status;
+`gcloud config configurations list` shows `default` still on `latentspacemail@gmail.com`.

@@ -11,3 +11,11 @@ def test_resolve_path_is_under_repo_root():
     path = resolve_path(load_config()["data"]["corpus_path"])
     assert path.is_absolute()
     assert path.name == "chunks.jsonl"
+
+
+def test_compute_plan_is_consistent_with_budget():
+    cfg = load_config()
+    compute, budget = cfg["compute"], cfg["budget"]
+    assert compute["spot_usd_per_hour"] < compute["on_demand_usd_per_hour"]
+    assert compute["train_gpu_count"] >= 2  # distributed means more than one device
+    assert budget["target_usd"] <= budget["expected_usd"] <= budget["cap_usd"]
