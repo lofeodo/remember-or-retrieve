@@ -13,8 +13,7 @@ data:
 
 compute:
   # Decided in step 2 (see docs/compute-plan.md). Prices are us-central1 spot, USD/hr,
-  # from a third-party mirror of GCP's catalog; re-verify against the GCP Billing Catalog
-  # once the project exists (step 2, part B).
+  # verified against the GCP Billing Catalog on 2026-10-09.
   base_model: Qwen/Qwen3-8B # 8.2B, Apache-2.0
   train_machine: a2-highgpu-4g # 4x A100 40GB
   train_gpu_count: 4

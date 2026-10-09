@@ -55,6 +55,7 @@ locals {
     "cloudresourcemanager.googleapis.com",
     "serviceusage.googleapis.com",
     "cloudquotas.googleapis.com",
+    "cloudbilling.googleapis.com",
   ]
 }
 

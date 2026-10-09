@@ -1,10 +1,13 @@
 # Compute plan
 
 Decision record for step 2. Locks the model, GPUs, parallelism strategy, and cost estimate
-that steps 3 to 12 build against. Prices are us-central1 USD/hr from a third-party mirror
-of GCP's catalog (gcloud-compute.com; GCP's own pricing pages are JavaScript-rendered and
-could not be fetched). They are re-verified against the Cloud Billing Catalog once the
-project exists.
+that steps 3 to 12 build against. Prices are us-central1 USD/hr. The `a2-highgpu-4g`
+numbers were **verified 2026-10-09 against the Cloud Billing Catalog API** (spot: 4 x
+$1.7603 GPU + 48 vCPU x $0.01897 + 340 GB x $0.002542 = $8.816/hr; on-demand $14.694/hr;
+L4 GPU spot $0.319/hr, on-demand $0.560/hr; A100 80GB GPU spot $2.357/hr). The other
+machine types (`a2-ultragpu-4g`, `a3-highgpu-8g`, `g2-standard-48`) are from a third-party
+mirror (gcloud-compute.com) and only cross-checked in part. Billing is in **CAD**; prices
+here are USD.
 
 ## Decision
 

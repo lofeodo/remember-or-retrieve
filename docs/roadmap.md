@@ -10,8 +10,16 @@ which was a starting point only. Each step is one feature branch and goes throug
 plan-then-approve cycle (workflow rules 2 to 8 in `CLAUDE.md`) before any of it is implemented. "Free"
 means no cloud or API spend.
 
+**Standing instruction: end-of-work report.** Every time work on something finishes
+(a task, a commit batch, a step), report two things, in short bullet points, no
+long prose:
+
+- **Done:** what was just completed.
+- **Left:** everything remaining in the current step, listed explicitly. If nothing is
+  left and the step is complete, say so plainly ("Nothing left. Step N is complete.").
+
 - [x] **Step 1 — Repo scaffold** (`feat/scaffold`, free)
-- [ ] **Step 2 — Compute plan, GCP bootstrap, GPU quota** (`feat/compute-plan`, free)
+- [x] **Step 2 — Compute plan, GCP bootstrap, GPU quota** (`feat/compute-plan`, free)
 - [ ] **Step 3 — Training data generation** (`feat/training-data`, ~$2 to $4 Claude API)
 - [ ] **Step 4 — Scoring harness and reward functions** (`feat/scoring-harness`, under $1 judge calls)
 - [ ] **Step 5 — Distributed training pipeline: SFT, LoRA vs full, DPO** (`feat/training-pipeline`, free)
@@ -197,11 +205,29 @@ exits 0, CI passes on GitHub. Spend stays $0; nothing paid exists, so no teardow
 
 ### Step 2 — Compute plan, GCP bootstrap, GPU quota (`feat/compute-plan`, free)
 
-Plan approved 2026-10-09. Status: in progress. Part A (compute plan) done: `docs/compute-plan.md`, `compute:` and
-`budget:` config sections, and a consistency test. Deviation from the plan: live prices
-made a 14B full fine-tune too tight against the cap, so the user chose Qwen3-8B on 4x A100
-40GB (`a2-highgpu-4g`); `CLAUDE.md`'s Base model row was amended. Part B (GCP bootstrap)
-waits for the user's go-ahead.
+Plan approved 2026-10-09. Status: complete (see deviations).
+
+**Outcome and deviations from the plan.**
+
+- Part A: `docs/compute-plan.md`, `compute:` and `budget:` config, consistency test.
+  Live prices made a 14B full fine-tune too tight against the cap, so the user chose
+  Qwen3-8B on 4x A100 40GB (`a2-highgpu-4g`); `CLAUDE.md`'s Base model row was amended.
+  Catalog-verified spot price $8.816/hr matched the mirror.
+- Part B: project `remember-or-retrieve` created under `daniel.lofeodo@gmail.com`; the one
+  open billing account linked; named gcloud config `remember-or-retrieve` created with
+  `--no-activate` (default config untouched). No account switch or new login was needed.
+- Deviation: the first APIs were enabled with `gcloud` before Terraform, so Terraform only
+  adopted them. `cloudbilling.googleapis.com` was added later (needed for catalog prices).
+- Deviation: the billing account is in **CAD**, and budget creation fails with a 400 in any
+  other currency. Budgets are CAD 28 (~USD 20) and CAD 70 (~USD 50) at an assumed 1.40
+  USD to CAD rate (`usd_to_cad` variable). All real spend is billed in CAD.
+- An unrelated account-wide CAD 20 "billing budget" already exists on the billing account;
+  it was left alone.
+- Quota requests filed (spot A100 40GB: 4 GPUs; spot CPUs: 48; plus 1 L4 for serving):
+  us-central1 A100 and CPUs **granted in full** automatically; L4 granted;
+  us-east1 and europe-west4 A100 granted 1 of 4 so far, still pending, and not needed
+  unless us-central1 has no spot capacity.
+- Spend: $0. Nothing billable was created, so there is no teardown to confirm.
 
 **Context.** Everything paid depends on the model size, GPU tier and count, and
 parallelism strategy, and a new GCP project starts with zero GPU quota (approval can take
