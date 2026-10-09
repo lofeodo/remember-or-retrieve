@@ -26,6 +26,18 @@ variable "billing_account" {
   description = "Billing account ID, e.g. via TF_VAR_billing_account. Not committed."
 }
 
+variable "currency_code" {
+  type        = string
+  default     = "CAD"
+  description = "Must match the billing account's currency (budget creation fails otherwise)."
+}
+
+variable "usd_to_cad" {
+  type        = number
+  default     = 1.40
+  description = "Assumed exchange rate used to express the USD budget in the account currency."
+}
+
 provider "google" {
   project               = var.project_id
   user_project_override = true
@@ -54,6 +66,7 @@ resource "google_project_service" "apis" {
 
 data "google_project" "this" {}
 
+# The billing account is in CAD, so the USD targets are converted at var.usd_to_cad.
 # Two budgets so each threshold is its own alert: the $20 target and the $50 hard cap.
 # Alerts email the billing account admins. They warn; they do not stop spend.
 resource "google_billing_budget" "target" {
@@ -65,8 +78,8 @@ resource "google_billing_budget" "target" {
   }
   amount {
     specified_amount {
-      currency_code = "USD"
-      units         = "20"
+      currency_code = var.currency_code
+      units         = tostring(ceil(20 * var.usd_to_cad))
     }
   }
   threshold_rules { threshold_percent = 0.5 }
@@ -84,8 +97,8 @@ resource "google_billing_budget" "cap" {
   }
   amount {
     specified_amount {
-      currency_code = "USD"
-      units         = "50"
+      currency_code = var.currency_code
+      units         = tostring(ceil(50 * var.usd_to_cad))
     }
   }
   threshold_rules { threshold_percent = 0.5 }
