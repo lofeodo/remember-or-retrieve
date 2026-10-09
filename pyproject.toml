@@ -1,0 +1,37 @@
+[project]
+name = "remember-or-retrieve"
+version = "0.1.0"
+description = "Fine-tuned model vs RAG on the OSRS Wiki: does the model remember the answer or retrieve it?"
+requires-python = ">=3.11"
+readme = "README.md"
+license = { text = "MIT" }
+dependencies = [
+    "pyyaml",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: tests that load a real model or make a real external API call; excluded by default",
+]
+addopts = '-m "not slow"'
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
