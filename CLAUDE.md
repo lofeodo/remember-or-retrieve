@@ -75,16 +75,8 @@ even if a later step seems obvious or quick.
    record for every step that has been planned. This is the project's paper trail —
    treat it as something a reader could reconstruct the whole project's history from.
 4. **Each step is implemented on its own feature branch** (`feat/<step-name>`), with
-   small, continual commits rather than one large batched push. Concretely:
-   - **One feature per branch, always.** This covers every change, not only roadmap
-     steps: a docs fix or a rule change gets its own branch too. Never commit directly
-     to `main`, and never fold an unrelated change into the branch at hand.
-   - **Work in bite-sized increments.** Each commit is one small, coherent change that
-     stands on its own (one module, one test file, one config change), not a day's work.
-   - **Commit and push as you go.** Push each commit to the remote branch right after
-     making it rather than letting local commits pile up. This is a standing
-     instruction: do not wait to be asked before committing or pushing to a feature
-     branch. Opening and merging the pull request still waits for the user.
+   small, continual commits rather than one large batched push. Changes are never
+   committed directly to `main`: every change goes on its own feature branch.
 5. **While a step is in progress**, keep its entry in the roadmap current. If the real
    implementation deviates from the approved plan (a library doesn't do what was
    expected, a number comes back different from what was assumed, a scope decision
