@@ -10,7 +10,7 @@ which was a starting point only. Each step is one feature branch and goes throug
 plan-then-approve cycle (workflow rules 2 to 8 in `CLAUDE.md`) before any of it is implemented. "Free"
 means no cloud or API spend.
 
-- [ ] **Step 1 — Repo scaffold** (`feat/scaffold`, free)
+- [x] **Step 1 — Repo scaffold** (`feat/scaffold`, free)
 - [ ] **Step 2 — Compute plan, GCP bootstrap, GPU quota** (`feat/compute-plan`, free)
 - [ ] **Step 3 — Training data generation** (`feat/training-data`, ~$2 to $4 Claude API)
 - [ ] **Step 4 — Scoring harness and reward functions** (`feat/scoring-harness`, under $1 judge calls)
@@ -136,4 +136,60 @@ to 34B range. A realistic landing zone is $25 to $35, inside the $50 cap.
 Each step's approved plan is copied here in full when it is approved, then kept current
 with real deviations as the step is implemented.
 
-*No step has been planned yet.*
+### Step 1 — Repo scaffold (`feat/scaffold`, free)
+
+Plan approved 2026-10-09. Status: complete (implemented as planned, no scope deviations).
+
+**Context.** Every later branch builds on this one, so it stays small and free: package
+skeleton, tooling, CI, and the corpus and golden set brought in from `rag-with-receipts`
+with provenance and checksums. No cloud, no API spend, no training dependencies.
+
+**What exploration found (changes the wording above).**
+
+- The golden set is committed upstream as `data/eval/qa_pairs.json` (55 items, fields
+  `id, question, type, answerable, gold_chunk_ids, gold_answer`; 35 single_hop, 15
+  multi_hop, 5 unanswerable with `type: null` and `answerable: false`). Pinning to a
+  `rag-with-receipts` commit works for it.
+- The corpus is **not** committed upstream. `data/processed/chunks.jsonl` (955 lines,
+  1.2 MB) is gitignored and regenerated from the live wiki, so "pinned to a commit" is
+  impossible and re-fetching could drift. It is therefore copied in from the local
+  `rag-with-receipts` checkout, its SHA-256 recorded, and committed here. All 55
+  `gold_chunk_ids` resolve in it.
+- Upstream `HEAD` is `6b8d032`. It has no CI.
+- Python 3.11 and 3.14 are both installed locally; the ML stack is not reliably available
+  on 3.14, so the project targets 3.11 like `rag-with-receipts`. `uv`, `terraform`, and
+  `ruff` were not installed; Terraform is left to steps 2 and 8.
+
+**Deliverables.**
+
+- `pyproject.toml` (src layout, `requires-python >=3.11`, runtime dep `pyyaml`, extra
+  `dev` = pytest + ruff; heavy extras are added by the step that needs them).
+- `src/remember_or_retrieve/`: `config.py` (`load_config`), `data.py` (`load_corpus`,
+  `load_golden_set`, `verify_data` recomputing SHA-256 against the manifest).
+- `config/config.yaml`; `data/corpus/chunks.jsonl`; `data/eval/golden_set.json` (renamed
+  from `qa_pairs.json`); `data/PROVENANCE.json`; `data/NOTICE.md` (OSRS Wiki, CC BY-NC-SA
+  3.0).
+- `scripts/verify_data.py`; `tests/test_data.py`, `tests/test_config.py`.
+- `.github/workflows/ci.yml` (ubuntu, Python 3.11: ruff check, ruff format --check,
+  pytest); `.gitignore`; MIT `LICENSE`; README stub.
+
+**Tests (offline, fast).** Corpus: 955 chunks, unique ids, required fields. Golden set: 55
+items, unique ids, 35/15/5 split, every `gold_chunk_id` in the corpus, unanswerable items
+have none. Checksums match the manifest and a tampered copy fails. Config loads and
+resolves the data paths.
+
+**Decisions made in the plan.** Python 3.11 with plain `venv` and pip; MIT license; golden
+set renamed `golden_set.json`; minimal dependencies now.
+
+**Verification.** `ruff check`, `ruff format --check`, `pytest` green, `verify_data.py`
+exits 0, CI passes on GitHub. Spend stays $0; nothing paid exists, so no teardown.
+
+**Implementation notes (small additions beyond the plan).**
+
+- Added `.gitattributes` (`data/** -text`, LF elsewhere). Without it, git's CRLF conversion
+  on Windows would change the data files' bytes and break the SHA-256 check against Linux CI.
+- CI runs on pull requests and pushes to `main`, and also runs `scripts/verify_data.py`.
+- Local results: ruff clean, 12 tests passing, `verify_data.py` OK.
+- Recorded checksums: `chunks.jsonl` `2b245aed...`, `golden_set.json` `ec89e698...`
+  (full values in `data/PROVENANCE.json`).
+- Spend: $0. Nothing paid was provisioned, so there is no teardown to confirm.

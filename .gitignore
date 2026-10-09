@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Environments and secrets
+.venv/
+venv/
+.env
+
+# Test / lint
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Training artifacts (checkpoints live in the GCS bucket / model registry, not git)
+checkpoints/
+outputs/
+wandb/
+mlruns/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+
+# Playwright MCP artifacts
+.playwright-mcp/
