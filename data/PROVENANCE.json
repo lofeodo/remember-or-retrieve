@@ -1,0 +1,18 @@
+{
+  "source_repo": "https://github.com/lofeodo/rag-with-receipts",
+  "source_commit": "6b8d032f405bd6be1058604f1e8259b77c21e2c2",
+  "copied_on": "2026-10-09",
+  "note": "The corpus is gitignored upstream (regenerated from the live wiki), so it was copied from a local checkout at the commit above and is pinned here by checksum. The golden set is committed upstream.",
+  "files": {
+    "data/corpus/chunks.jsonl": {
+      "source_path": "data/processed/chunks.jsonl",
+      "sha256": "2b245aeda9db32b2c0c7b29d899b86ac5004c9cc79cbcb5eefbd5547918d71af",
+      "count": 955
+    },
+    "data/eval/golden_set.json": {
+      "source_path": "data/eval/qa_pairs.json",
+      "sha256": "ec89e6987585ef014df4dbdf8686f8c33c1327a63974994f4ec2eb5635552c82",
+      "count": 55
+    }
+  }
+}

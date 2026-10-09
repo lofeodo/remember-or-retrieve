@@ -1,0 +1,557 @@
+[
+  {
+    "id": "q001",
+    "question": "Which attack style has weapons with the largest range of possible attack ranges?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Attack_range__004"
+    ],
+    "gold_answer": "The ranged attack style."
+  },
+  {
+    "id": "q002",
+    "question": "In the combat triangle, which attack styles are strong against which?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Combat_triangle__000"
+    ],
+    "gold_answer": "Warriors are strong against rangers. Rangers are strong against mages. Mages are strong against warriors."
+  },
+  {
+    "id": "q003",
+    "question": "What combat level is a monkey guard?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Monkey_Guard__000"
+    ],
+    "gold_answer": "Level 167."
+  },
+  {
+    "id": "q004",
+    "question": "What's the drop rate of a medium clue scroll from a giant skeleton in tarn's lair?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Clue_scroll__medium__014"
+    ],
+    "gold_answer": "1 in 128."
+  },
+  {
+    "id": "q005",
+    "question": "When does a ring of life teleport you?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Ring_of_life__001"
+    ],
+    "gold_answer": "When your hitpoints dip below 10% of their maximum value."
+  },
+  {
+    "id": "q006",
+    "question": "How many amylase crystals are required to make a single dose of stamina from a super energy potion?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Stamina_potion__004"
+    ],
+    "gold_answer": "1 single amylase crystal."
+  },
+  {
+    "id": "q007",
+    "question": "What does a summer pie do when you eat it?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Summer_pie__001"
+    ],
+    "gold_answer": "It heals 11 hitpoints per bite, 10% run energy, and grants a temporary +5% skill boost to agility."
+  },
+  {
+    "id": "q008",
+    "question": "Do regular snakes on Karamja inflict poison damage?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Snake__001"
+    ],
+    "gold_answer": "No."
+  },
+  {
+    "id": "q009",
+    "question": "What can regular snakes drop?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Snake__002"
+    ],
+    "gold_answer": "They drop bones and can drop a snake spine."
+  },
+  {
+    "id": "q010",
+    "question": "When were mithril seeds released?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Mithril_seeds__000"
+    ],
+    "gold_answer": "They were released on the 24th of September 2002."
+  },
+  {
+    "id": "q011",
+    "question": "When was the Attack skill released?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Attack__000"
+    ],
+    "gold_answer": "04-Jan-01"
+  },
+  {
+    "id": "q012",
+    "question": "What was the maximum combat level in RuneScape Classic?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Combat_level__007"
+    ],
+    "gold_answer": "123"
+  },
+  {
+    "id": "q013",
+    "question": "According to the combat triangle, which combat style is magic strong against?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Combat_triangle__000"
+    ],
+    "gold_answer": "Warriors (melee)"
+  },
+  {
+    "id": "q014",
+    "question": "How much damage can Vorkath's dragonfire hit for?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Dragonfire__001"
+    ],
+    "gold_answer": "Up to 80"
+  },
+  {
+    "id": "q015",
+    "question": "What is the Hitpoints skill also called?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Hitpoints__000"
+    ],
+    "gold_answer": "HP, health"
+  },
+  {
+    "id": "q016",
+    "question": "By what percentage of max Hitpoints does a Phoenix necklace heal the wearer, and at what threshold does it trigger?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Hitpoints__006"
+    ],
+    "gold_answer": "30% of max HP, triggers when HP drops below 20% of max"
+  },
+  {
+    "id": "q017",
+    "question": "What is the initial poison damage dealt by a Poison Scorpion?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Poison__008"
+    ],
+    "gold_answer": "3"
+  },
+  {
+    "id": "q018",
+    "question": "What percentage of damage dealt does the Saradomin godsword's special attack recharge in Prayer points?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Prayer__006"
+    ],
+    "gold_answer": "25% of damage dealt, rounded up"
+  },
+  {
+    "id": "q019",
+    "question": "For how long will a player automatically retaliate to attackers with no input before Auto Retaliate effectively stops?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Auto_Retaliate__000"
+    ],
+    "gold_answer": "20 minutes"
+  },
+  {
+    "id": "q020",
+    "question": "What is the requirement to use Vannaka as a Slayer master?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Slayer_training__003"
+    ],
+    "gold_answer": "40 combat or 99 Slayer"
+  },
+  {
+    "id": "q021",
+    "question": "How many Slayer reward points does it cost to permanently block a task with Duradel/Kuradal?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Slayer_training__024"
+    ],
+    "gold_answer": "100 points"
+  },
+  {
+    "id": "q022",
+    "question": "Once \"Bigger and Badder\" is unlocked, what are the odds of a kill attracting a superior Slayer monster?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Slayer_training__032"
+    ],
+    "gold_answer": "1/200"
+  },
+  {
+    "id": "q023",
+    "question": "Which quest must be completed before Herblore training can begin, and what level does it grant?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Herblore_training__000"
+    ],
+    "gold_answer": "Druidic Ritual; grants level 3 Herblore"
+  },
+  {
+    "id": "q024",
+    "question": "Using the auto-clean method, how many grimy herbs can be cleaned per hour?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Herblore_training__026"
+    ],
+    "gold_answer": "Up to 3,000"
+  },
+  {
+    "id": "q025",
+    "question": "When was the quest Monkey Madness I released?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Monkey_Madness_I__000"
+    ],
+    "gold_answer": "06-Dec-04"
+  },
+  {
+    "id": "q026",
+    "question": "What items are required to start Monkey Madness I?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Monkey_Madness_I__003"
+    ],
+    "gold_answer": "A gold bar, five empty inventory slots, a ball of wool, monkey bones/corpse from Karamja, and five bananas"
+  },
+  {
+    "id": "q027",
+    "question": "What are the quest point and coin rewards for completing Monkey Madness I?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Monkey_Madness_I__021"
+    ],
+    "gold_answer": "3 quest points, 10,000 coins"
+  },
+  {
+    "id": "q028",
+    "question": "What item do players receive for being caught and jailed for the 100th time during Monkey Madness I?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Monkey_Madness_I__024"
+    ],
+    "gold_answer": "A stuffed monkey"
+  },
+  {
+    "id": "q029",
+    "question": "In which quests does Glough appear?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Glough__000"
+    ],
+    "gold_answer": "The Grand Tree, Monkey Madness I, Monkey Madness II"
+  },
+  {
+    "id": "q030",
+    "question": "What is the combat level of the Jungle Demon fought at the end of Monkey Madness I?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Jungle_Demon__000"
+    ],
+    "gold_answer": "195"
+  },
+  {
+    "id": "q031",
+    "question": "What is Kruk's role during Monkey Madness I?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Kruk__003"
+    ],
+    "gold_answer": "The player must speak to him to be escorted to King Awowogei"
+  },
+  {
+    "id": "q032",
+    "question": "What is the chance of receiving a medium clue scroll by feeding the quest monkey bananas in Monkey Madness I?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Monkey__Monkey_Madness_I__003"
+    ],
+    "gold_answer": "1/256"
+  },
+  {
+    "id": "q033",
+    "question": "How many doses of antipoison are needed to fully cure venom?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Antipoison__001"
+    ],
+    "gold_answer": "Two doses"
+  },
+  {
+    "id": "q034",
+    "question": "How many balls of wool are needed to make a M'speak amulet in Monkey Madness I?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Ball_of_wool__003"
+    ],
+    "gold_answer": "1"
+  },
+  {
+    "id": "q035",
+    "question": "What is the high alch value of a diamond?",
+    "type": "single_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Diamond__000"
+    ],
+    "gold_answer": "1,200 coins"
+  },
+  {
+    "id": "q036",
+    "question": "Are monkey archers aggressive?",
+    "type": "multi_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Monkey_Archer__001",
+      "Aggressiveness__005"
+    ],
+    "gold_answer": "Yes, unless the player is holding a monkey greegree or has completed monkey madness II"
+  },
+  {
+    "id": "q037",
+    "question": "What is the combined high-alchemy value Monkey Madness I rewards?",
+    "type": "multi_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Monkey_Madness_I__021",
+      "Diamond__000"
+    ],
+    "gold_answer": "Rewards: 10,000 coins, 3 diamonds. 10,000 coins + (3 diamonds x 1,200) coins = 13,600 coins."
+  },
+  {
+    "id": "q038",
+    "question": "How much greater is the melee attack bonus of the necklace the Slayer training guide ranks as the single best option for melee tasks than the amulet of glory?",
+    "type": "multi_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Slayer_training__013",
+      "Attack__003"
+    ],
+    "gold_answer": "Amulet of rancour (+25) − amulet of glory (+10) = +15"
+  },
+  {
+    "id": "q039",
+    "question": "Roughly how many times higher is Glough's combat level than the combat level of the Jungle Demon fought at the climax of Monkey Madness I?",
+    "type": "multi_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Glough__001",
+      "Jungle_Demon__000"
+    ],
+    "gold_answer": "431 ÷ 195 ≈ 2.2×"
+  },
+  {
+    "id": "q040",
+    "question": "By how much does Kruk's highest possible max hit exceed the Jungle Demon's max hit?",
+    "type": "multi_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Kruk__001",
+      "Jungle_Demon__000"
+    ],
+    "gold_answer": "37 (Kruk, ranged) − 32 (Jungle Demon) = 5"
+  },
+  {
+    "id": "q041",
+    "question": "If a player bought the full daily Grand Exchange buy limit of diamonds and crafted every one into a diamond ring, how much total Crafting XP would that earn?",
+    "type": "multi_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Diamond__000",
+      "Diamond__003"
+    ],
+    "gold_answer": "11,000 × 85 XP = 935,000 Crafting XP"
+  },
+  {
+    "id": "q042",
+    "question": "How many Wigs could theoretically be crafted from one day's full Grand Exchange buy limit of balls of wool?",
+    "type": "multi_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Ball_of_wool__000",
+      "Ball_of_wool__006"
+    ],
+    "gold_answer": "13,000 ÷ 3 = 4,333 Wigs"
+  },
+  {
+    "id": "q043",
+    "question": "Which requires the higher level — the Herblore level needed to make a Combat potion, or the Slayer level needed to be assigned Dark beasts — and by how many levels?",
+    "type": "multi_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Herblore_training__006",
+      "Slayer_training__046"
+    ],
+    "gold_answer": "Dark beasts (Slayer 90) is higher than the Combat potion's Herblore requirement (36) by 54 levels"
+  },
+  {
+    "id": "q044",
+    "question": "Approximately how many diamonds, bought at their Grand Exchange price, could a player accumulate before spending the maximum possible coin stack in Old School RuneScape?",
+    "type": "multi_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Coins__030",
+      "Diamond__000"
+    ],
+    "gold_answer": "2,147,483,647 ÷ 1,577 ≈ 1,361,752 diamonds"
+  },
+  {
+    "id": "q045",
+    "question": "How many Prayer levels of buffer does Monkey Madness I's recommended Prayer level give over the bare minimum needed to use Protect from Magic during the Jungle Demon fight?",
+    "type": "multi_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Monkey_Madness_I__003",
+      "Jungle_Demon__002"
+    ],
+    "gold_answer": "43 (recommended) − 37 (minimum required) = 6 levels"
+  },
+  {
+    "id": "q046",
+    "question": "If a player made as many Antipoison(3) potions as that potion's daily Grand Exchange buy limit, what would their total profit or loss be, after GE tax?",
+    "type": "multi_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Antipoison__000",
+      "Antipoison__003"
+    ],
+    "gold_answer": "2,000 × −625 coins = −1,250,000 coins (a loss)"
+  },
+  {
+    "id": "q047",
+    "question": "Between Attack and Hitpoints, which skill's \"quest skill choice\" experience-reward pool totals higher, and by how much?",
+    "type": "multi_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Attack__021",
+      "Hitpoints__021"
+    ],
+    "gold_answer": "Hitpoints' total (1,282,300 XP) is higher than Attack's (1,267,300 XP) by 15,000 XP"
+  },
+  {
+    "id": "q048",
+    "question": "If a player used the ancient mace's special attack to deal damage equal to the Jungle Demon's maximum hit, how many Prayer points would that special attack restore?",
+    "type": "multi_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Prayer__006",
+      "Jungle_Demon__000"
+    ],
+    "gold_answer": "The ancient mace restores 100% of damage dealt, so a 32-damage hit restores 32 Prayer points"
+  },
+  {
+    "id": "q049",
+    "question": "How much total Herblore experience would a player earn by completing the Druidic Ritual quest and then making one dose of antipoison?",
+    "type": "multi_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Herblore_training__001",
+      "Antipoison__001"
+    ],
+    "gold_answer": "250 XP (Druidic Ritual) + 37.5 XP (antipoison creation) = 287.5 Herblore XP"
+  },
+  {
+    "id": "q050",
+    "question": "By what factor is a diamond's high-alchemy value greater than a ball of wool's?",
+    "type": "multi_hop",
+    "answerable": true,
+    "gold_chunk_ids": [
+      "Diamond__000",
+      "Ball_of_wool__000"
+    ],
+    "gold_answer": "1,200 ÷ 1 = 1,200 times greater"
+  },
+  {
+    "id": "q051",
+    "question": "What are the full rewards for completing the Recipe for Disaster quest?",
+    "type": null,
+    "answerable": false,
+    "gold_chunk_ids": [],
+    "gold_answer": null
+  },
+  {
+    "id": "q052",
+    "question": "What is Vorkath's combat level and max melee hit?",
+    "type": null,
+    "answerable": false,
+    "gold_chunk_ids": [],
+    "gold_answer": null
+  },
+  {
+    "id": "q053",
+    "question": "What are the steps to complete the Gertrude's Cat quest?",
+    "type": null,
+    "answerable": false,
+    "gold_chunk_ids": [],
+    "gold_answer": null
+  },
+  {
+    "id": "q054",
+    "question": "What is the most efficient method to train Woodcutting to level 99?",
+    "type": null,
+    "answerable": false,
+    "gold_chunk_ids": [],
+    "gold_answer": null
+  },
+  {
+    "id": "q055",
+    "question": "How is Farming XP calculated in the Tithe Farm minigame?",
+    "type": null,
+    "answerable": false,
+    "gold_chunk_ids": [],
+    "gold_answer": null
+  }
+]
