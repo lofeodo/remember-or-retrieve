@@ -100,6 +100,40 @@ even if a later step seems obvious or quick.
    (mirror the explicit teardown confirmations in `rag-with-receipts`'s CLAUDE.md), and
    never leave a billable resource running "just in case" between steps.
 
+## Security — this is a public repository
+
+Everything committed here is world-readable forever, git history included, and the demo and
+serving endpoints will be on the public internet. Treat security and exploitability as a
+design constraint in every step, not a final review. Concretely:
+
+- **Secrets live in Google Secret Manager**, not in the repo, not in `config.yaml`, not in
+  Terraform variables files or state, not in Dockerfiles, CI logs, or notebooks. Services
+  read them at runtime through Secret Manager with a least-privilege service account.
+  Locally, keys come from environment variables or an untracked `.env` (already gitignored).
+  GitHub Actions secrets are for CI only.
+- **Do not read API keys or credentials.** Do not `cat`, print, grep, or otherwise open
+  `.env` files, key files, service-account JSON, `terraform.tfvars`, or credential stores,
+  and never echo a secret into command output, logs, plans, commit messages, or the
+  roadmap. If a step needs a key, refer to it by name (the env var or secret ID) and have
+  the user supply it; check that one is set, not what it is.
+- **Never commit sensitive information**: keys, tokens, demo keys, service-account files,
+  Terraform state (`*.tfstate`), `*.tfvars`, billing details, account IDs beyond what is
+  already public, or personal data. Review `git diff --staged` for these before every commit.
+  If something sensitive is committed anyway, rotate it first, then clean the history; deleting
+  it in a later commit is not enough.
+- **Public endpoints are attack surface.** Anything exposed (the demo UI, the vLLM/GKE
+  endpoint, the RAG API calls) needs authentication or rate limiting where appropriate,
+  input-length limits, no prompt or log leakage, no open ingress beyond what is required,
+  and budget exposure in mind: an unauthenticated GPU endpoint is a way for strangers to
+  spend the $50 cap. Prefer private networking and scoped IAM (no owner roles, no
+  `allUsers` on anything but the intended public demo).
+- **Supply chain**: pin dependency versions and container images, and keep CI permissions
+  minimal. Model weights and datasets are untrusted inputs: no `trust_remote_code=True` and no
+  unpickling untrusted files.
+- **Say so in the plan.** Any step that adds a credential, an exposed endpoint, or an IAM
+  role must call out its security implications in its plan, the same way paid steps call out
+  cost.
+
 ## Roadmap
 
 The roadmap lives in its own document: [`docs/roadmap.md`](docs/roadmap.md). It holds the
