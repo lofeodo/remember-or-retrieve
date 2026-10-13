@@ -20,6 +20,11 @@ data = [
     "numpy",
     "sentence-transformers",
 ]
+eval = [
+    "anthropic==1.13.0",
+    "numpy",
+    "sentence-transformers",
+]
 
 [build-system]
 requires = ["setuptools>=68"]

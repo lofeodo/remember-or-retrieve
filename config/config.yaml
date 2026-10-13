@@ -58,3 +58,25 @@ training_data:
     jaccard: 0.5 # normalized word 5-gram Jaccard against any golden question
     dedup_cosine: 0.95 # near-duplicates within the training set
     dedup_jaccard: 0.7
+
+scoring:
+  # Step 4. One scorer for every system (fine-tune, RAG, Mistral, Cohere) and the GRPO reward.
+  judge:
+    model: claude-sonnet-5 # same judge and prompt as rag-with-receipts, so its numbers reproduce
+    max_tokens: 1024
+    prices_usd_per_mtok: { input: 2.0, output: 10.0 } # sync calls, no batch discount
+    max_usd: 1 # abort before any paid call if the estimate exceeds this
+    workers: 4
+  cache_dir: data/raw/scoring # untracked
+  reference_path: data/eval/rag_reference.json
+  grounding:
+    nli_model: cross-encoder/nli-deberta-v3-base
+    nli_revision: null # pinned when the model is first downloaded (see roadmap step 4)
+    batch_size: 32
+    entailment_threshold: 0.5
+    contradiction_threshold: 0.5
+    overlap_threshold: 0.3
+  validation:
+    judge_accuracy_tolerance: 0.055 # re-judged accuracy vs published 0.836 (3 questions)
+    judge_min_agreement: 0.90
+    nli_prob_tolerance: 0.001
