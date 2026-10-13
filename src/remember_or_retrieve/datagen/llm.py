@@ -49,11 +49,11 @@ def build_params(req: Request) -> dict:
 
 
 def estimate_tokens(text: str) -> int:
-    return int(len(text) / 3.6) + 1
+    return int(len(text) / 2.6) + 1  # calibrated on the step-3 pilot (real usage)
 
 
 def estimate_cost(requests: list[Request], prices: dict, batch_discount: float) -> dict:
-    """Heuristic pre-submit estimate (chars/3.6 for input, declared est_out for output)."""
+    """Heuristic pre-submit estimate (chars/2.6 for input, declared est_out for output)."""
     per_model: dict[str, dict] = {}
     for r in requests:
         m = per_model.setdefault(r.model, {"requests": 0, "input_tokens": 0, "output_tokens": 0})

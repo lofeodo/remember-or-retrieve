@@ -142,12 +142,20 @@ def single_hop_user(chunk: Chunk, n: int, fresh_angle: bool) -> str:
 def multi_hop_user(a: Chunk, b: Chunk) -> str:
     return (
         f"{format_excerpt(a, 'A')}\n\n{format_excerpt(b, 'B')}\n\n"
-        "Write ONE question that needs a fact from excerpt A and a fact from excerpt B combined, "
-        "for example a comparison, a difference, a sum, a product or a rate computed from numbers "
-        "found in both. Show the arithmetic compactly in the answer (for example "
-        '"431 / 195 = 2.2 times"), ending with the result. `evidence_a` is a verbatim quote from '
-        "A and `evidence_b` a verbatim quote from B. If no sensible question combines the two, "
-        "set feasible to false and leave the other fields empty."
+        "Write ONE question that genuinely needs a fact from excerpt A and a fact from excerpt B "
+        "combined: a comparison, a difference, a sum, a product or a rate computed from numbers "
+        "found in both (for example a total cost, a total experience, or how many levels or "
+        "points one value exceeds another). Requirements:\n"
+        "- A single clear, natural question a player would really ask. No meta-puzzles about "
+        "counting categories, no restating or self-correcting, no ellipses.\n"
+        "- Ask only about Old School RuneScape. Ignore anything about RuneScape 3 or other games.\n"
+        "- Both facts must be necessary. Do not make a question that one excerpt answers alone, "
+        "and do not multiply by a made-up quantity unless the question states it.\n"
+        "- Every number used must come from the excerpts or the question itself.\n"
+        'Show the arithmetic compactly in the answer (for example "431 / 195 = 2.2 times"), '
+        "ending with the result. `evidence_a` is a verbatim quote from A and `evidence_b` a "
+        "verbatim quote from B. If no sensible, natural question combines the two, set feasible "
+        "to false and leave the other fields empty."
     )
 
 

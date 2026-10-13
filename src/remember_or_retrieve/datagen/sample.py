@@ -5,28 +5,39 @@ import re
 from collections import defaultdict
 
 from remember_or_retrieve.data import Chunk
-from remember_or_retrieve.datagen import prompts
+from remember_or_retrieve.datagen import prompts, validate
 from remember_or_retrieve.datagen.llm import Request
+
+MAX_TITLE_MENTIONS = 25
+MIN_NUMBERS = 6  # a chunk needs this many distinct numbers to be a multi-hop partner
 
 
 def multi_hop_candidates(chunks: list[Chunk]) -> list[tuple[str, str]]:
     """Candidate chunk-id pairs: same page (different sections), and cross-page where one
-    chunk's text mentions the other's page title. Order is deterministic."""
+    chunk's text mentions the other's page title. Both chunks must be number-rich, since
+    pairs without shared quantities produced contrived questions in the pilot. Deterministic."""
+    rich = {c.chunk_id for c in chunks if len(validate.numbers(c.text)) >= MIN_NUMBERS}
     by_page: dict[str, list[Chunk]] = defaultdict(list)
     for c in chunks:
         by_page[c.page_title].append(c)
     pairs: set[tuple[str, str]] = set()
     for page_chunks in by_page.values():
         for i, a in enumerate(page_chunks):
-            for b in page_chunks[i + 1 : i + 4]:  # nearby chunks only
-                if a.section_path != b.section_path:
+            for b in page_chunks[i + 1 : i + 2]:  # adjacent chunks only
+                if a.section_path != b.section_path and {a.chunk_id, b.chunk_id} <= rich:
                     pairs.add((a.chunk_id, b.chunk_id))
     titles = {t: re.compile(rf"\b{re.escape(t)}\b", re.IGNORECASE) for t in by_page if len(t) >= 4}
     for a in chunks:
+        if a.chunk_id not in rich:
+            continue
         for t, pat in titles.items():
             if t != a.page_title and pat.search(a.text):
-                b = by_page[t][0]
-                pairs.add(tuple(sorted((a.chunk_id, b.chunk_id))))
+                # One partner per link: the chunk of page t sharing the most words with a.
+                a_words = set(validate.norm_words(a.text))
+                partners = [b for b in by_page[t] if b.chunk_id in rich]
+                if partners:
+                    b = max(partners, key=lambda b: len(a_words & set(validate.norm_words(b.text))))
+                    pairs.add(tuple(sorted((a.chunk_id, b.chunk_id))))
     return sorted(pairs)
 
 
@@ -100,7 +111,7 @@ def build_generation_requests(chunks: list[Chunk], cfg: dict) -> list[Request]:
                     schema=prompts.MULTI_HOP_SCHEMA,
                     effort="medium",
                     thinking="adaptive",
-                    est_out=450,
+                    est_out=170,
                     max_tokens=4096,
                     meta={"split": split, "kind": "multi_hop", "chunk_ids": [a_id, b_id]},
                 )
