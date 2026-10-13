@@ -122,10 +122,10 @@ training:
     target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
   dpo:
     beta: 0.1
-    lr: 5.0e-6
+    lr: 2.0e-5
     epochs: 1
-    micro_batch_size: 8
-    grad_accum: 2
+    global_batch_size: 64
+    micro_batch_size: 8 # pairs per device; grad accumulation is derived
     max_length: 320
   strategy: # per stage: ddp | fsdp
     sft_full: fsdp

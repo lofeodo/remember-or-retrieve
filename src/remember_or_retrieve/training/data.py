@@ -115,10 +115,16 @@ def accum_steps(global_batch_size: int, micro_batch_size: int, world_size: int) 
     return per_rank // micro_batch_size
 
 
-def to_trl_dpo(row: dict) -> dict:
-    """A frozen DPO row in TRL's conversational preference format."""
-    return {
-        "prompt": row["prompt_messages"],
-        "chosen": [{"role": "assistant", "content": row["chosen"]}],
-        "rejected": [{"role": "assistant", "content": row["rejected"]}],
-    }
+def encode_dpo_row(tok: Tokenizer, row: dict, max_length: int) -> dict:
+    """One preference pair as two SFT-style sequences sharing the same rendered prompt."""
+    prompt = tok.prompt_ids(row["prompt_messages"])
+    out = {"id": row["id"]}
+    for side in ("chosen", "rejected"):
+        target = tok.encode(row[side] + IM_END)
+        if len(prompt) + len(target) > max_length:
+            raise ValueError(f"{row['id']} {side}: exceeds max_length {max_length}")
+        out[side] = {
+            "input_ids": prompt + target,
+            "labels": [IGNORE_INDEX] * len(prompt) + target,
+        }
+    return out

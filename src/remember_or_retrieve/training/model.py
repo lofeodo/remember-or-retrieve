@@ -37,6 +37,24 @@ def load_pretrained(model_cfg: dict, source: str | None = None):
     )
 
 
+def load_trained(model_cfg: dict, path: str, smoke_cfg: dict | None = None, seed: int = 0):
+    """A trained checkpoint as one plain model: a full-SFT model dir as is, or a LoRA adapter dir
+    merged into its base. With `smoke_cfg`, the base is the seeded tiny smoke model."""
+    from pathlib import Path
+
+    if not (Path(path) / "adapter_config.json").exists():
+        return load_pretrained(model_cfg, path)
+    from peft import PeftModel
+
+    if smoke_cfg is not None:
+        from transformers import AutoTokenizer
+
+        base = tiny_model(smoke_cfg, len(AutoTokenizer.from_pretrained(path)), seed)
+    else:
+        base = load_pretrained(model_cfg)
+    return PeftModel.from_pretrained(base, path).merge_and_unload()
+
+
 def tiny_model(smoke_cfg: dict, vocab_size: int, seed: int):
     """A small randomly initialised Qwen3-architecture model in fp32 for the CPU smoke test.
 

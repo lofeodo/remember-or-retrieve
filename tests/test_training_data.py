@@ -86,12 +86,20 @@ def test_accum_steps():
         data.accum_steps(64, 16, 3)
 
 
-def test_dpo_conversion():
-    out = data.to_trl_dpo(
-        {"prompt_messages": [{"role": "user", "content": "q"}], "chosen": "a", "rejected": "b"}
-    )
-    assert out["chosen"] == [{"role": "assistant", "content": "a"}]
-    assert out["rejected"][0]["content"] == "b" and out["prompt"][0]["content"] == "q"
+def test_dpo_pair_shares_prompt_and_masks_it():
+    row = {
+        "id": "d1",
+        "prompt_messages": [{"role": "user", "content": "q"}],
+        "chosen": "a",
+        "rejected": "bb",
+    }
+    out = data.encode_dpo_row(FakeTok(), row, 100)
+    n_prompt = len(FakeTok().prompt_ids(row["prompt_messages"]))
+    for side in ("chosen", "rejected"):
+        assert out[side]["input_ids"][:n_prompt] == out["chosen"]["input_ids"][:n_prompt]
+        assert out[side]["labels"][:n_prompt] == [data.IGNORE_INDEX] * n_prompt
+        assert out[side]["labels"][-1] == IM_END_ID
+    assert len(out["rejected"]["input_ids"]) == len(out["chosen"]["input_ids"]) + 1
 
 
 def test_committed_sft_and_dpo_rows_have_the_expected_shape():
