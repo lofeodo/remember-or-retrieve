@@ -112,18 +112,22 @@ def check_loss_decreasing(curve: list[float], min_drop: float = 0.0) -> dict:
 
 
 def check_rollout_health(
-    rewards: list[float], zero_variance: list[float], truncated: list[float]
+    rewards: list[float],
+    zero_variance: list[float],
+    truncated: list[float],
+    require_stops: bool = True,
 ) -> dict:
     """An RL run is learning from something: per-step mean rewards are finite, some groups had
     spread (all-identical rewards give zero advantage, so no gradient), and completions are not
-    all cut off at the length limit."""
+    all cut off at the length limit (`require_stops=False` for the smoke model, which is randomly
+    initialised and never emits an end-of-turn token)."""
     if not rewards:
         _fail("no RL steps ran")
     if not all(math.isfinite(r) for r in rewards):
         _fail("non-finite reward")
     if min(zero_variance) >= 1.0:
         _fail("every group had identical rewards at every step: no learning signal")
-    if min(truncated) >= 1.0:
+    if require_stops and min(truncated) >= 1.0:
         _fail("every completion hit the length limit at every step")
     return {
         "steps": len(rewards),

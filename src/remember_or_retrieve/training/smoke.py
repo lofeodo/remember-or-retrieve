@@ -28,11 +28,25 @@ def dpo_job(device, out_dir: str, init_from: str | None = None) -> dict:
     )
 
 
+class SyntheticReward:
+    """A deterministic, text-dependent reward in [-1, 1] with spread across samples. The tiny
+    random model cannot produce a real fact, so the project's reward would be flat for it; this
+    exercises the same machinery (advantages, learner, checks) with a signal."""
+
+    def __call__(self, row, text):
+        import zlib
+
+        from remember_or_retrieve.scoring.reward import RewardBreakdown
+
+        return RewardBreakdown(total=zlib.crc32(text.encode()) % 200 / 100.0 - 1.0)
+
+
 def grpo_job(
     device, out_dir: str, init_from: str | None = None, kwargs: dict | None = None
 ) -> dict:
     return grpo.train_grpo(
         load_config(),
+        reward_fn=SyntheticReward(),
         device=device,
         out_dir=Path(out_dir),
         init_from=init_from,

@@ -321,8 +321,12 @@ def train_grpo(
     stop_after: int | None = None,
     tokenizer=None,
     report=None,
+    reward_fn=None,
 ) -> dict:
-    """Run GRPO on this rank under an initialised process group. Returns the run record."""
+    """Run GRPO on this rank under an initialised process group. Returns the run record.
+
+    `reward_fn(row, text) -> RewardBreakdown` replaces the project's reward (tests only: a random
+    tiny model never produces a correct fact, so the real reward has no spread to learn from)."""
     t_start = time.perf_counter()
     tcfg = cfg["training"]
     gcfg = {**tcfg["grpo"], **(tcfg["smoke"]["grpo"] if smoke else {})}
@@ -337,8 +341,9 @@ def train_grpo(
     # ---- data
     tok = tokenizer or model_lib.load_tokenizer(tcfg["model"])
     im_end = tok.tok.convert_tokens_to_ids(data.IM_END)
-    scorer = make_scorer(cfg)
-    train_rows, heldout_rows = load_prompts(cfg, scorer)
+    real_scorer = make_scorer(cfg)
+    scorer = reward_fn or real_scorer
+    train_rows, heldout_rows = load_prompts(cfg, real_scorer)
     if smoke:
         train_rows = train_rows[: tcfg["smoke"]["grpo"]["rows"]]
     train_prompts = [data.grpo_prompt_ids(tok, r, SFT_SYSTEM_PROMPT) for r in train_rows]
@@ -514,6 +519,7 @@ def train_grpo(
                 [r["reward"] for r in log],
                 [r["zero_variance_groups"] for r in log],
                 [r["truncated"] for r in log],
+                require_stops=not smoke,
             ),
         )
         if is_cuda:
