@@ -94,13 +94,15 @@ def grpo_learner_job(device, n_rollouts: int = 8) -> dict:
         world=world,
     )
     sums = grpo._all_reduce_sum([out["loss"], out["kl"]], device)
+    spread = checks.check_checksums_equal(
+        checks.gather(checks.grad_checksum(net)), "gradient checksums"
+    )
+    dist.barrier()  # no rank may tear down gloo while another is still in a collective
     return {
         "loss": sums[0] / tokens,
         "kl": sums[1] / tokens,
         "grad_checksum": checks.grad_checksum(net),
-        "grad_spread": checks.check_checksums_equal(
-            checks.gather(checks.grad_checksum(net)), "gradient checksums"
-        ),
+        "grad_spread": spread,
     }
 
 
