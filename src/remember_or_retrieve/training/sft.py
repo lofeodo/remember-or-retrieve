@@ -242,6 +242,7 @@ def train_sft(
             interrupted = True
             break
 
+    trace.close()
     util = sampler.stop()
     # ---- run-level checks
     all_global = checks.gather(global_hist[start_step:])

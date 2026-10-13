@@ -174,6 +174,12 @@ class TraceWindow:
         self.prof = profile(activities=acts)
         self.prof.__enter__()
 
+    def close(self) -> None:
+        """Stop an open profiler (a run that ends inside the window, for example on preemption)."""
+        if self.prof is not None:
+            self.prof.__exit__(None, None, None)
+            self.prof = None
+
     def maybe_stop(self) -> None:
         if self.prof is None:
             return

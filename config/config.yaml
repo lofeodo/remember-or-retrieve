@@ -101,7 +101,7 @@ training:
     revision: b968826d9c46dd6066d109eabc6255188de91218 # pinned 2026-10-13
     dtype: bfloat16
   out_dir: data/checkpoints # untracked; step 8 points storage at the GCS bucket
-  max_length: 256 # tokens per example (longest SFT row is well under this; checked by a test)
+  max_length: 320 # tokens per SFT example; longest frozen row is 293 (p99 210), checked by a test
   sft:
     epochs: 5 # memorization is the goal; final value chosen from the step 9 rehearsal
     lr_full: 1.0e-5
@@ -126,7 +126,7 @@ training:
     epochs: 1
     global_batch_size: 64
     micro_batch_size: 8 # pairs per device; grad accumulation is derived
-    max_length: 320
+    max_length: 512 # longest frozen DPO pair is 442 tokens, checked by a test
   strategy: # per stage: ddp | fsdp
     sft_full: fsdp
     sft_lora: ddp
