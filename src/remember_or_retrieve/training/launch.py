@@ -82,6 +82,21 @@ def _ray_loop(config: dict) -> None:
             init_from=config["init_from"],
             smoke=config["smoke"],
         )
+    elif stage == "grpo":
+        from remember_or_retrieve.training import grpo, smoke
+
+        grpo.train_grpo(
+            config["cfg"],
+            device=get_device(),
+            out_dir=Path(config["out_dir"]),
+            init_from=config["init_from"],
+            smoke=config["smoke"],
+            resume=True,  # a Ray restart after a preemption continues from the last checkpoint
+            stop_after=config.get("stop_after"),
+            report=lambda metrics: ray.train.report(metrics),
+            # a random tiny model has no reward spread; the smoke run uses a synthetic signal
+            reward_fn=smoke.SyntheticReward() if config["smoke"] else None,
+        )
     else:
         raise ValueError(f"unknown stage {stage}")
 

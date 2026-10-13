@@ -95,7 +95,7 @@ scoring:
     per_ref_word: 2.0
 
 training:
-  # Step 5. PyTorch stages (SFT full/LoRA, DPO) under Ray Train. GRPO is step 6, JAX step 7.
+  # Steps 5 and 6. PyTorch stages (SFT full/LoRA, DPO, GRPO) under Ray Train. JAX is step 7.
   model:
     name: Qwen/Qwen3-8B
     revision: b968826d9c46dd6066d109eabc6255188de91218 # pinned 2026-10-13
@@ -127,10 +127,31 @@ training:
     global_batch_size: 64
     micro_batch_size: 8 # pairs per device; grad accumulation is derived
     max_length: 512 # longest frozen DPO pair is 442 tokens, checked by a test
+  grpo:
+    # Step 6. On-policy GRPO on top of the DPO model: LoRA, DDP, reference = adapter disabled.
+    # Scale is a cost dial (see docs/roadmap.md step 6): prompts_per_step x group_size
+    # completions per step, epochs x (train prompts // prompts_per_step) steps.
+    group_size: 8 # completions sampled per prompt
+    prompts_per_step: 16 # global; must be a multiple of the world size
+    epochs: 4 # over the ~360 non-held-out prompts, ~88 steps
+    heldout: 40 # prompts kept out of training, scored greedily (a signal curve, not the metric)
+    beta: 0.04 # KL weight against the starting (DPO) policy
+    lr: 1.0e-5
+    warmup_ratio: 0.1
+    temperature: 1.0 # sampled from the policy itself: top_k and top_p are forced off
+    max_new_tokens: 96 # SFT answers p99 is 42 words
+    lora_dropout: 0.0 # rollout and learner probabilities must match, so no dropout
+    micro_batch_size: 16 # completions per learner forward, per device
+    rollout_batch_size: 64 # sequences per generate call, per device
+    min_reference_reward: 0.9 # drop frozen prompts whose own reference answer scores below this
+    eval_every: 20
+    checkpoint_every: 20 # resume checkpoint (steps)
+    seed: 1729
   strategy: # per stage: ddp | fsdp
     sft_full: fsdp
     sft_lora: ddp
     dpo: ddp
+    grpo: ddp
   profiling:
     warmup_steps: 2 # excluded from throughput
     trace_steps: 3 # torch.profiler window; 0 disables
@@ -152,3 +173,4 @@ training:
     head_dim: 16
     steps: 6
     rows: 96
+    grpo: { group_size: 2, prompts_per_step: 4, steps: 4, rows: 16, heldout: 4, max_new_tokens: 6 }

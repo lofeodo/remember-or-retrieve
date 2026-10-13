@@ -96,7 +96,8 @@ def _resume_options(trainable_only: bool):
     from torch.distributed.checkpoint.state_dict import StateDictOptions
 
     # LoRA: the frozen base is reloaded from the pretrained weights, so only adapters are saved.
-    return StateDictOptions(ignore_frozen_params=trainable_only)
+    # strict=False because the saved dict omits the frozen base: loading must not demand its keys.
+    return StateDictOptions(ignore_frozen_params=trainable_only, strict=not trainable_only)
 
 
 def save_resume_state(

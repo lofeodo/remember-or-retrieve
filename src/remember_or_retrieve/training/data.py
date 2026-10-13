@@ -1,4 +1,4 @@
-"""Training data for SFT and DPO: tokenization, loss masks, and world-size-independent batching.
+"""Training data for SFT, DPO and GRPO: tokenization, loss masks, world-size-independent batching.
 
 No torch import here, so the fast CI job can test all of it with a fake tokenizer.
 
@@ -128,3 +128,59 @@ def encode_dpo_row(tok: Tokenizer, row: dict, max_length: int) -> dict:
             "labels": [IGNORE_INDEX] * len(prompt) + target,
         }
     return out
+
+
+def grpo_prompt_ids(tok: Tokenizer, row: dict, system_prompt: str) -> list[int]:
+    """Rendered prompt for a GRPO row: the same system prompt and template as SFT and generate."""
+    return tok.prompt_ids(
+        [{"role": "system", "content": system_prompt}, {"role": "user", "content": row["question"]}]
+    )
+
+
+def group_advantages(rewards: list[float], group_size: int, eps: float = 1e-6) -> list[float]:
+    """GRPO advantages: within each consecutive group of `group_size` completions of one prompt,
+    (reward - group mean) / group std. A group with no spread has no signal and gets zeros."""
+    if group_size < 1 or len(rewards) % group_size:
+        raise ValueError(f"{len(rewards)} rewards do not split into groups of {group_size}")
+    out: list[float] = []
+    for i in range(0, len(rewards), group_size):
+        g = rewards[i : i + group_size]
+        mean = sum(g) / group_size
+        std = (sum((r - mean) ** 2 for r in g) / group_size) ** 0.5
+        out.extend([0.0] * group_size if std < eps else [(r - mean) / std for r in g])
+    return out
+
+
+def encode_completion(prompt_ids: list[int], completion_ids: list[int]) -> dict:
+    """A sampled completion as a training sequence: only the completion tokens carry loss."""
+    return {
+        "input_ids": prompt_ids + completion_ids,
+        "labels": [IGNORE_INDEX] * len(prompt_ids) + completion_ids,
+    }
+
+
+def split_heldout(rows: list[dict], n_heldout: int, seed: int) -> tuple[list[dict], list[dict]]:
+    """(train, heldout), stratified by `kind` so the held-out set mirrors the kind mix.
+
+    Deterministic in (rows, n_heldout, seed). Each kind gives its proportional share (at least 1
+    if it has rows and n_heldout > 0); the result is exactly `n_heldout` rows when possible.
+    """
+    if n_heldout <= 0:
+        return list(rows), []
+    by_kind: dict[str, list[int]] = {}
+    for i, r in enumerate(rows):
+        by_kind.setdefault(r["kind"], []).append(i)
+    rng = random.Random(seed)
+    held: set[int] = set()
+    kinds = sorted(by_kind)
+    quotas = {k: max(1, round(n_heldout * len(by_kind[k]) / len(rows))) for k in kinds}
+    # Trim or top up the rounding error on the largest kind.
+    largest = max(kinds, key=lambda k: len(by_kind[k]))
+    quotas[largest] = max(1, quotas[largest] + n_heldout - sum(quotas.values()))
+    for k in kinds:
+        idx = list(by_kind[k])
+        rng.shuffle(idx)
+        held.update(idx[: quotas[k]])
+    train = [r for i, r in enumerate(rows) if i not in held]
+    heldout = [r for i, r in enumerate(rows) if i in held]
+    return train, heldout

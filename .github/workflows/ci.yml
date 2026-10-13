@@ -37,3 +37,5 @@ jobs:
       - run: pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cpu
       - run: pip install -e ".[dev,train]"
       - run: pytest -m slow tests/test_training_smoke.py tests/test_training_tokenization.py -q
+        env:
+          PYTHONFAULTHANDLER: "1" # a native abort in a worker prints a Python traceback

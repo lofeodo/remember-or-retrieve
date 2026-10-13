@@ -2,7 +2,8 @@
 
 Reports tokens/sec (global and per device), step-time percentiles, peak memory per device,
 trainable vs total parameters, an approximate MFU, and, over a short window, how much of the
-step is communication versus compute. Step 6 adds rollout throughput to the same schema.
+step is communication versus compute. The RL stage (GRPO) adds a `rollout` block: generation
+throughput, since rollouts, not the gradient step, are usually the bottleneck there.
 """
 
 import json
@@ -26,6 +27,12 @@ class RankStats:
     mem_kind: str = "cuda_allocated"  # or "cpu_rss" when no GPU
     load_s: float = 0.0
     comm_fraction: float | None = None
+    # RL stages only (post-warmup, one entry per step except lengths, one per completion):
+    rollout_s: list[float] = field(default_factory=list)
+    reward_s: list[float] = field(default_factory=list)
+    rollout_tokens: list[int] = field(default_factory=list)  # generated tokens, this rank
+    rollout_completions: list[int] = field(default_factory=list)
+    completion_lengths: list[int] = field(default_factory=list)
 
 
 def percentile(values: list[float], q: float) -> float:
@@ -65,6 +72,7 @@ def build_profile(
     if on_gpu and peak_tflops and train_s:
         mfu = (6 * total_params * tokens / train_s) / (peak_tflops * 1e12 * world)
     fractions = [r.comm_fraction for r in ranks if r.comm_fraction is not None]
+    rollout = rollout_block(ranks, n_steps, step_times) if any(r.rollout_s for r in ranks) else None
     return {
         "stage": stage,
         **meta,
@@ -85,6 +93,33 @@ def build_profile(
         "load_s": max((r.load_s for r in ranks), default=0.0),
         "train_s": train_s,
         "wall_clock_s": wall_clock_s,
+        **({"rollout": rollout} if rollout else {}),
+    }
+
+
+def rollout_block(ranks: list[RankStats], n_steps: int, step_times: list[float]) -> dict:
+    """Generation throughput of an RL stage. A step's rollout phase lasts as long as its slowest
+    rank (everyone then waits for the learner); tokens and completions are summed across ranks."""
+    n = min([n_steps] + [len(r.rollout_s) for r in ranks])
+    times = [max(r.rollout_s[i] for r in ranks) for i in range(n)]
+    reward_times = [max(r.reward_s[i] for r in ranks) for i in range(n)]
+    tokens = sum(sum(r.rollout_tokens[:n]) for r in ranks)
+    completions = sum(sum(r.rollout_completions[:n]) for r in ranks)
+    gen_s = sum(times)
+    lengths = [x for r in ranks for x in r.completion_lengths]
+    world = len(ranks)
+    return {
+        "measured_steps": n,
+        "generated_tokens": tokens,
+        "generated_tokens_per_s_global": tokens / gen_s if gen_s else 0.0,
+        "generated_tokens_per_s_per_device": tokens / gen_s / world if gen_s and world else 0.0,
+        "completions_per_s_global": completions / gen_s if gen_s else 0.0,
+        "rollout_s_p50": percentile(times, 0.5),
+        "rollout_s_p95": percentile(times, 0.95),
+        "rollout_fraction_of_step": gen_s / sum(step_times[:n]) if sum(step_times[:n]) else 0.0,
+        "reward_s_total": sum(reward_times),
+        "completion_tokens_mean": statistics.mean(lengths) if lengths else 0.0,
+        "completion_tokens_p95": percentile([float(x) for x in lengths], 0.95),
     }
 
 
@@ -136,6 +171,19 @@ class StepTimer:
             self.stats.step_times_s.append(dt)
             self.stats.step_tokens.append(tokens)
         self.step += 1
+
+    def record_rollout(
+        self, rollout_s: float, reward_s: float, lengths: list[int], tokens: int | None = None
+    ) -> None:
+        """RL stages: log one step's generation and reward time. Skipped during warmup, like
+        step times, so the two stay aligned."""
+        if self.step < self.warmup:
+            return
+        self.stats.rollout_s.append(rollout_s)
+        self.stats.reward_s.append(reward_s)
+        self.stats.rollout_tokens.append(sum(lengths) if tokens is None else tokens)
+        self.stats.rollout_completions.append(len(lengths))
+        self.stats.completion_lengths.extend(lengths)
 
     def finish(self) -> RankStats:
         if self.cuda:
