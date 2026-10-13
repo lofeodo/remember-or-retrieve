@@ -114,3 +114,26 @@ def test_comm_fraction_counts_collectives():
     ev = [("nccl:all_reduce", 2.0), ("aten::mm", 6.0), ("gloo:all_gather", 2.0)]
     assert profiling.comm_fraction_from_events(ev) == pytest.approx(0.4)
     assert profiling.comm_fraction_from_events([]) is None
+
+
+def test_compare_stages_table_renders_each_profile():
+    import importlib.util
+    from pathlib import Path
+
+    spec = importlib.util.spec_from_file_location(
+        "compare_stages", Path(__file__).parents[1] / "scripts" / "compare_stages.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    mk = lambda stage, strat, trainable: profiling.build_profile(  # noqa: E731
+        stage,
+        [rank(0, [1.0], [100]), rank(1, [1.0], [100])],
+        total_params=1000,
+        trainable_params=trainable,
+        meta={"strategy": strat},
+        wall_clock_s=5.0,
+        peak_tflops=312,
+    )
+    out = mod.table([mk("sft_full", "fsdp", 1000), mk("sft_lora", "ddp", 50)])
+    lines = out.splitlines()
+    assert len(lines) == 4 and "sft_lora" in lines[3] and "50 / 1,000" in lines[3]
