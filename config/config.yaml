@@ -30,3 +30,31 @@ budget:
   target_usd: 20
   cap_usd: 50
   expected_usd: 34
+
+training_data:
+  # Step 3. Claude is used at build time only (never at inference).
+  # Model ids and prices verified against the claude-api reference on 2026-10-13.
+  generator_model: claude-sonnet-5-5 # multi-hop generation only (reasoning and arithmetic)
+  cheap_model: claude-haiku-5-5 # single-hop, abstention, verification, DPO-rejected (decided 2026-10-13 after the $13 Sonnet-everywhere estimate)
+  prices_usd_per_mtok: # standard (non-batch) rates; the batch discount is applied below
+    claude-sonnet-5-5: { input: 2.0, output: 10.0 }
+    claude-haiku-5-5: { input: 0.10, output: 0.50 }
+  batch_discount: 0.5
+  max_usd: 5 # abort before submit if the estimate exceeds this
+  seed: 1729
+  raw_dir: data/raw/training # untracked: batch ids, requests, raw responses
+  out_dir: data/training # frozen, committed
+  # Requests per kind. Over-generate, then trim to the targets after validation drops.
+  sft_targets: { single_hop: 3300, multi_hop: 1000, unanswerable: 900, val_fraction: 0.05 }
+  grpo_targets: { single_hop: 450, multi_hop: 120, unanswerable: 150 }
+  pairs_per_chunk: { table: 5, infobox: 5, prose: 4 } # single-hop pairs asked per chunk (SFT)
+  multi_hop_requests: { sft: 1400, grpo: 200 }
+  unanswerable: { sft_questions_per_cluster: 3, cluster_size: 3, grpo_clusters: 60 }
+  grpo_single_hop: { chunks: 220, pairs_per_chunk: 2 }
+  dpo_targets: { hallucinated: 700, verbose: 500, fabricated_abstention: 300 }
+  leakage:
+    embedding_model: BAAI/bge-large-en-v1.5
+    cosine: 0.88 # drop a training question this similar to any golden question (calibrated)
+    jaccard: 0.5 # normalized word 5-gram Jaccard against any golden question
+    dedup_cosine: 0.95 # near-duplicates within the training set
+    dedup_jaccard: 0.7
