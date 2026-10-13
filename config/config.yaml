@@ -54,7 +54,7 @@ training_data:
   dpo_targets: { hallucinated: 700, verbose: 500, fabricated_abstention: 300 }
   leakage:
     embedding_model: BAAI/bge-large-en-v1.5
-    cosine: 0.88 # drop a training question this similar to any golden question (calibrated)
+    cosine: 0.85 # calibrated by hand on 2026-10-13: 0.88 let real paraphrases through (0.877, 0.878)
     jaccard: 0.5 # normalized word 5-gram Jaccard against any golden question
     dedup_cosine: 0.95 # near-duplicates within the training set
     dedup_jaccard: 0.7
