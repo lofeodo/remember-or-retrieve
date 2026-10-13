@@ -93,3 +93,60 @@ scoring:
     verbosity: 0.3 # maximum penalty, reached at twice the length budget
     min_words: 30
     per_ref_word: 2.0
+
+training:
+  # Step 5. PyTorch stages (SFT full/LoRA, DPO) under Ray Train. GRPO is step 6, JAX step 7.
+  model:
+    name: Qwen/Qwen3-8B
+    revision: b968826d9c46dd6066d109eabc6255188de91218 # pinned 2026-10-13
+    dtype: bfloat16
+  out_dir: data/checkpoints # untracked; step 8 points storage at the GCS bucket
+  max_length: 256 # tokens per example (longest SFT row is well under this; checked by a test)
+  sft:
+    epochs: 5 # memorization is the goal; final value chosen from the step 9 rehearsal
+    lr_full: 1.0e-5
+    lr_lora: 2.0e-4
+    warmup_ratio: 0.03
+    weight_decay: 0.0
+    max_grad_norm: 1.0
+    global_batch_size: 64 # fixed across world sizes so 1-GPU and 4-GPU runs are the same training job
+    micro_batch_size: 16 # per device; grad accumulation is derived
+    seed: 1729
+    eval_every: 50
+    gradient_checkpointing: true
+  lora:
+    r: 64
+    alpha: 128
+    dropout: 0.05
+    target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+  dpo:
+    beta: 0.1
+    lr: 5.0e-6
+    epochs: 1
+    micro_batch_size: 8
+    grad_accum: 2
+    max_length: 320
+  strategy: # per stage: ddp | fsdp
+    sft_full: fsdp
+    sft_lora: ddp
+    dpo: ddp
+  profiling:
+    warmup_steps: 2 # excluded from throughput
+    trace_steps: 3 # torch.profiler window; 0 disables
+    a100_bf16_peak_tflops: 312
+    gpu_util_sample_s: 1.0
+    min_median_gpu_util: 30 # percent, every device (GPU runs only)
+  checks:
+    loss_rel_tol: 1.0e-3 # per-rank loss vs all-reduced mean
+    equivalence_rel_tol: 5.0e-3 # 2-rank vs 1-rank loss curve
+    max_failures: 2 # Ray restarts after a spot preemption
+  smoke:
+    # Tiny randomly initialised Qwen3-shaped model; real tokenizer.
+    hidden_size: 64
+    intermediate_size: 128
+    num_hidden_layers: 2
+    num_attention_heads: 4
+    num_key_value_heads: 2
+    head_dim: 16
+    steps: 6
+    rows: 96
