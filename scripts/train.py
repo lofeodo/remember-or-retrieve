@@ -1,8 +1,9 @@
-"""Train, check, and sample the PyTorch stages (SFT full/LoRA, DPO) under Ray Train.
+"""Train, check, and sample the PyTorch stages (SFT full/LoRA, DPO, GRPO) under Ray Train.
 
 Subcommands:
   sft --mode full|lora    one SFT stage (full = FSDP2, lora = DDP, per config)
   dpo --init-from DIR     DPO on top of an SFT checkpoint (LoRA, DDP)
+  grpo --init-from DIR    GRPO on top of the DPO checkpoint (LoRA, DDP; adapter chain is followed)
   check --mode M          run a stage on 1 worker and on N, and require the same loss curve
   generate --checkpoint D answer the 55 golden questions, in the scoring answers format
 
@@ -56,7 +57,7 @@ def default_out(args, stage: str) -> Path:
 
 
 def cmd_stage(args) -> int:
-    stage = "dpo" if args.cmd == "dpo" else f"sft_{args.mode}"
+    stage = args.cmd if args.cmd in ("dpo", "grpo") else f"sft_{args.mode}"
     out = default_out(args, stage)
     record = launch_stage(args, stage, args.num_workers, out)
     failed = {k: v for k, v in record["checks"].items() if v.get("passed") is False}
@@ -123,6 +124,12 @@ def main() -> int:
     p = sub.add_parser("dpo")
     common(p)
     p.add_argument("--init-from", help="SFT checkpoint dir (model/ or adapter/); omit for the base")
+    p.set_defaults(fn=cmd_stage)
+
+    p = sub.add_parser("grpo")
+    common(p)
+    p.add_argument("--init-from", help="DPO (or SFT) adapter dir; omit for the base model")
+    p.add_argument("--stop-after", type=int, help="stop after N steps, leaving a resume checkpoint")
     p.set_defaults(fn=cmd_stage)
 
     p = sub.add_parser("check")

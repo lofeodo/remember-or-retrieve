@@ -111,6 +111,27 @@ def check_loss_decreasing(curve: list[float], min_drop: float = 0.0) -> dict:
     return {"first_third": head, "last_third": tail}
 
 
+def check_rollout_health(
+    rewards: list[float], zero_variance: list[float], truncated: list[float]
+) -> dict:
+    """An RL run is learning from something: per-step mean rewards are finite, some groups had
+    spread (all-identical rewards give zero advantage, so no gradient), and completions are not
+    all cut off at the length limit."""
+    if not rewards:
+        _fail("no RL steps ran")
+    if not all(math.isfinite(r) for r in rewards):
+        _fail("non-finite reward")
+    if min(zero_variance) >= 1.0:
+        _fail("every group had identical rewards at every step: no learning signal")
+    if min(truncated) >= 1.0:
+        _fail("every completion hit the length limit at every step")
+    return {
+        "steps": len(rewards),
+        "mean_zero_variance_groups": statistics.mean(zero_variance),
+        "mean_truncated": statistics.mean(truncated),
+    }
+
+
 def check_equivalence(curve_a: list[float], curve_b: list[float], rel_tol: float) -> dict:
     """Two runs on the same global batches (for example 1 rank vs 2 ranks) trace the same curve."""
     n = min(len(curve_a), len(curve_b))

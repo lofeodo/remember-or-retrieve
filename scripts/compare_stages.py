@@ -52,11 +52,53 @@ def table(profiles: list[dict]) -> str:
     return "\n".join(lines)
 
 
+ROLLOUT_HEADER = [
+    "stage",
+    "GPUs",
+    "generated tok/s/device",
+    "completions/s",
+    "rollout p50 (s)",
+    "rollout share of step",
+    "mean / p95 completion tokens",
+]
+
+
+def rollout_table(profiles: list[dict]) -> str:
+    """RL stages only: generation throughput, the usual bottleneck there."""
+    rows = [ROLLOUT_HEADER]
+    for p in profiles:
+        r = p.get("rollout")
+        if r:
+            rows.append(
+                [
+                    p["stage"],
+                    str(p["world_size"]),
+                    f"{r['generated_tokens_per_s_per_device']:,.0f}",
+                    f"{r['completions_per_s_global']:.1f}",
+                    f"{r['rollout_s_p50']:.2f}",
+                    f"{r['rollout_fraction_of_step']:.0%}",
+                    f"{r['completion_tokens_mean']:.0f} / {r['completion_tokens_p95']:.0f}",
+                ]
+            )
+    if len(rows) == 1:
+        return ""
+    lines = ["| " + " | ".join(r) + " |" for r in rows]
+    lines.insert(1, "|" + "|".join("---" for _ in ROLLOUT_HEADER) + "|")
+    return "
+".join(lines)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     ap.add_argument("stages", nargs="+", type=Path, help="stage dirs (or profile.json files)")
     args = ap.parse_args()
-    print(table([load(p) for p in args.stages]))
+    profiles = [load(p) for p in args.stages]
+    print(table(profiles))
+    if rollouts := rollout_table(profiles):
+        print("
+Rollouts (RL stages)
+
+" + rollouts)
     return 0
 
 
