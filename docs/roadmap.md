@@ -22,7 +22,7 @@ long prose:
 - [x] **Step 2 — Compute plan, GCP bootstrap, GPU quota** (`feat/compute-plan`, free)
 - [x] **Step 3 — Training data generation** (`feat/training-data`, $4.98 Claude API)
 - [x] **Step 4 — Scoring harness and reward functions** (`feat/scoring-harness`, $0.29 judge calls)
-- [ ] **Step 5 — Distributed training pipeline: SFT, LoRA vs full, DPO** (`feat/training-pipeline`, free)
+- [x] **Step 5 — Distributed training pipeline: SFT, LoRA vs full, DPO** (`feat/training-pipeline`, free)
 - [ ] **Step 6 — GRPO stage** (`feat/grpo`, free)
 - [ ] **Step 7 — JAX training stage** (`feat/jax-stage`, free)
 - [ ] **Step 8 — Training infrastructure and model registry** (`feat/training-infra`, under $1)
@@ -766,7 +766,7 @@ there is no teardown to confirm.
 
 ### Step 5 — Distributed training pipeline: SFT, LoRA vs full, DPO (`feat/training-pipeline`, free)
 
-Plan approved 2026-10-13. Status: in progress.
+Plan approved 2026-10-13. Status: complete (see outcome and deviations).
 
 #### Context
 
@@ -913,3 +913,61 @@ that needed a looser tolerance) go into the roadmap entry. Nothing is committed 
   is the recorded fallback.
 - Optional follow-up if wanted: a real-tokenizer single-GPU LoRA run on the local RTX 3060 (needs CUDA torch);
   deliberately left out as it adds install cost for little proof beyond the tiny-model path.
+
+#### Outcome and deviations from the plan (recorded 2026-10-13)
+
+**Result.** `src/remember_or_retrieve/training/` (data, model, parallel, sft, dpo, profiling, checks,
+launch, generate, smoke), `scripts/train.py` (`sft | dpo | check | generate`),
+`scripts/compare_stages.py`, `docker/smoke.Dockerfile`, a `training:` config section, a `train` extra,
+and a `smoke-distributed` CI job. 100 tests pass in the dev-only job; the 10 distributed smoke tests
+(2-worker Ray and multiprocessing runs on a tiny Qwen3-shaped model, CPU, gloo) pass in Docker and in
+a clean-container replay of both CI jobs. Not yet run on GitHub Actions itself.
+
+**Verification against the plan.**
+
+| Check | Result |
+|---|---|
+| Ranks started, gradients synced, weights identical (DDP), parameters sharded (FSDP2), one coherent loss | pass in every SFT and DPO smoke run |
+| 2-rank vs 1-rank loss curve (full/FSDP2, full/DDP, LoRA/DDP) | agree; worst relative difference 1e-7 (full), within 5e-3 (LoRA, dropout RNG differs by split) |
+| Resume after simulated preemption (FSDP2, stop at step 3) | continues the uninterrupted curve |
+| Deliberately unsynced run | caught by the gradient-checksum check (test) |
+| DPO on top of an SFT adapter; Ray Train path; `generate` output loads in `scoring` | pass |
+| GPU-busy check | skipped on CPU by design; measured in the paid run |
+
+Smoke profile table (CPU, 2 workers, 10M-parameter model; shows the code runs, not real numbers):
+sft_full FSDP 402 tok/s/device, sft_lora DDP 542, dpo 375; LoRA trains 131k of 9.9M parameters.
+
+**Deviations from the approved plan.**
+
+- **DPO is an own loop, not TRL.** TRL 1.15 routes `DPOTrainer` through a fused LM-head kernel that
+  needs Triton, so it cannot run on CPU and the stage would have reached the paid window untested.
+  This is the fallback the plan named. `trl` and `accelerate` are not dependencies. Reference policy is
+  the adapter-disabled model, as planned.
+- **Max lengths set from the data.** The real tokenizer showed SFT rows up to 293 tokens (p99 210) and
+  DPO pairs up to 442, so `max_length` is 320 (SFT) and 512 (DPO), not 256 and 320. A test fails on any
+  row that does not fit. One SFT epoch is about 628k tokens.
+- **Loss-coherence check redefined.** Each rank sees different examples, so its own-slice loss cannot
+  match the mean to 1e-3. The check is: every rank observes the identical all-reduced loss (1e-6), and
+  each local loss stays within a 0.75 band of it.
+- **Batch size is global.** Config uses `global_batch_size` (64) with derived accumulation, and the loss
+  is normalised by the global token count, so 1 and N ranks are the same training job.
+- **FSDP2 master weights are fp32** (about 16 bytes/parameter, roughly 33 GB per GPU on 4x40 GB), not the
+  12 bytes the compute plan assumed, to avoid bf16 update loss. This is tight on A100 40GB. Step 9 must
+  check memory first and fall back to the compute plan's options (8-bit optimizer, partial unfreeze,
+  80GB machine) if needed. Not testable before the paid window.
+- **Resume state lives in the output directory** (`resume/`), not in Ray's checkpoint store. Step 8 must
+  make it durable (bucket sync) or a spot preemption loses it with the VM.
+- **Ray dashboard is off**, which makes Ray log harmless "State API unavailable" messages. Ray 2.59
+  enables token auth by default.
+- Rank 0 loads the model on every rank (about 4 x 32 GB host RAM for the fp32 full run; the machine has
+  340 GB). Meta-device loading is a possible optimisation, not needed.
+
+**Caveats.**
+
+- Real tokens/sec, peak GPU memory, MFU, communication share and GPU utilisation are only measured in
+  step 9. The measurement code runs and is tested, but its GPU branches (NVML sampling, CUDA memory,
+  NCCL) are untested here.
+- The torch profiler trace is written per rank next to the checkpoint.
+
+**Spend.** $0. Nothing billable was created, so there is no teardown to confirm. Running total stays
+$5.27 of the $20 target and $50 cap.
