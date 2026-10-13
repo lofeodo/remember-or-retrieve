@@ -20,7 +20,7 @@ long prose:
 
 - [x] **Step 1 — Repo scaffold** (`feat/scaffold`, free)
 - [x] **Step 2 — Compute plan, GCP bootstrap, GPU quota** (`feat/compute-plan`, free)
-- [ ] **Step 3 — Training data generation** (`feat/training-data`, ~$2 to $4 Claude API)
+- [x] **Step 3 — Training data generation** (`feat/training-data`, $4.98 Claude API)
 - [ ] **Step 4 — Scoring harness and reward functions** (`feat/scoring-harness`, under $1 judge calls)
 - [ ] **Step 5 — Distributed training pipeline: SFT, LoRA vs full, DPO** (`feat/training-pipeline`, free)
 - [ ] **Step 6 — GRPO stage** (`feat/grpo`, free)
@@ -121,7 +121,7 @@ and Cohere API spend counts against the budget.
 ~$34 expected, ~$49 high (full table in [`compute-plan.md`](compute-plan.md)). The $20 target
 is not reachable for a genuinely distributed run; the $50 cap holds in every case.
 
-**Spend to date: $0.** Nothing has been provisioned.
+**Spend to date: $4.98** (step 3, Claude API only; ledger in the step 3 outcome). Nothing has been provisioned.
 
 ## Known risks
 
@@ -294,7 +294,7 @@ and $50 alerts and the enabled APIs list shows the APIs; quota requests visible 
 
 ### Step 3 — Training data generation (`feat/training-data`, ~$2 to $4 Claude API)
 
-Plan approved 2026-10-13. Status: in progress.
+Plan approved 2026-10-13. Status: complete (see outcome and deviations).
 
 ###### Context
 
@@ -461,3 +461,64 @@ goes into the roadmap entry. Nothing is committed directly to `main`.
 - Exact leakage thresholds (calibrated as above).
 - Exact per-kind counts after validation drops (target totals ~6,000 SFT, ~1,500 DPO, ~800 GRPO prompts; if a
   gate drops far more than expected I regenerate that kind rather than lower the bar).
+
+#### Outcome and deviations from the plan (recorded 2026-10-13)
+
+**Result.** `data/training/`: `sft_train.jsonl` 4,841 + `sft_val.jsonl` 255 (5,096 SFT rows: 4,000
+single-hop, 422 multi-hop, 674 abstention), `dpo.jsonl` 1,500 (700 hallucinated, 500 verbose, 300
+fabricated-abstention), `grpo_prompts.jsonl` 404 (275 / 62 / 67), `MANIFEST.json`. The leakage gate
+(`scripts/check_leakage.py`) reports 0 leaks over 7,000 training questions and fails when a golden
+question is injected. 30 tests pass.
+
+**Spend ledger (USD, real, billed at batch rates except the pilots).**
+
+| Item | Cost |
+|---|---|
+| Pilots (sync calls, standard rate) | 0.282 |
+| Generation batch (2,685 requests) | 4.294 (estimate 3.70) |
+| Verification batch (1,695 requests) | 0.246 |
+| DPO rejected-answer batch (1,800 requests) | 0.160 |
+| **Step 3 total** | **4.98** |
+
+Running project total: $4.98 of the $20 target and $50 cap. This is above the plan's $2 to $4 but
+inside the roadmap's $3 to $7 Claude line. No cloud resource was created, so there is no teardown.
+
+**Deviations from the approved plan.**
+
+- **Cost was re-planned after the first estimate.** The plan's $2 to $4 assumed Sonnet 5.5 for
+  everything. The first estimate was $13.10, so (with the user's approval) single-hop, abstention,
+  verification, and DPO-rejected calls use **Haiku 5.5** (`cheap_model`); only multi-hop generation
+  uses Sonnet 5.5. The estimator was recalibrated against real pilot usage (chars/2.6) and still came in
+  16% under the actual generation cost.
+- **Structured outputs, not forced tools.** Sonnet 5.5 rejects forced `tool_choice` with a 400, so
+  every call uses `output_config.format` (JSON schema). Thinking is "off" via `between_tools` on
+  Sonnet and `disabled` on Haiku; multi-hop and the multi-hop solver run adaptive at medium effort.
+- **Multi-hop pairing was redesigned after the pilots.** Random same-page pairs produced contrived
+  questions. Candidates are now adjacent same-page chunks plus cross-page links through specific page
+  titles (mentioned in at most 25 chunks, one best-overlap partner), and both chunks must contain at
+  least 6 distinct numbers. That left 1,147 candidates, so multi-hop requests were cut from 2,000/300
+  to 950/150. Yield after all gates is about 40%. **Result: 422 SFT multi-hop rows, not 1,500 (and 62
+  GRPO, not 200).** The model sees less multi-hop arithmetic in training than the plan intended; this
+  is a known weakness to look for in the step 9 multi-hop scores. Single-hop was raised to 4,000
+  (7/6/5 pairs per table/infobox/prose chunk) to partly compensate.
+- **SFT is 5,096 rows, not ~6,000**; abstention is 674 (13%), GRPO is 404, not ~800.
+- **Operand check is approximate.** For multi-hop, "every operand must appear in evidence" is
+  implemented as: at most 2 numbers in the answer may be absent from the evidence and question (the
+  result and one intermediate). The independent Haiku solve is the second line of defence (27 rows
+  dropped for disagreement).
+- **Leakage threshold calibrated by hand: cosine 0.85, not 0.88.** At 0.88, real paraphrases of golden
+  questions survived (0.877 and 0.878). 0.85 drops 120 questions in total, plus an exact/5-gram check.
+  The generator reproduced several golden questions verbatim (cosine 1.000), which is expected since the
+  golden set was written from the same pages.
+- **Estimation used a heuristic**, not the free count-tokens endpoint (3,000+ calls were not worth it).
+
+**Caveats to carry into the README.**
+
+- **Abstention is "not in this corpus", not "not true".** Some abstention questions are real OSRS facts
+  that are simply outside the 955 chunks (for example the God Wars Dungeon requirement). 280 candidates
+  that the verifier judged answerable from the nearest chunks were dropped, but the model will still be
+  trained to decline facts that exist on the wiki beyond the corpus.
+- **DPO rejected answers are off-policy** (written by Haiku, not sampled from the SFT model).
+- **The validation split measures format and loss, not generalization**; facts overlap with training
+  by design, and with the golden set (only the questions are excluded).
+- Some multi-hop questions are still somewhat contrived even after the pairing fix.
