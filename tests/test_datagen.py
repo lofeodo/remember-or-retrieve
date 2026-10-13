@@ -154,7 +154,7 @@ def test_estimate_and_budget_guard(tmp_path):
 
 def test_make_client_requires_key_and_never_prints_it(monkeypatch):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+    monkeypatch.delenv("ANTHROPIC_1ST_API_KEY", raising=False)
     try:
         llm.make_client()
     except RuntimeError as e:

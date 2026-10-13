@@ -78,14 +78,19 @@ def usage_cost(model: str, input_tokens: int, output_tokens: int, prices: dict, 
     return (input_tokens * p["input"] + output_tokens * p["output"]) / 1e6 * discount
 
 
+KEY_ENV_VARS = ("ANTHROPIC_API_KEY", "ANTHROPIC_1ST_API_KEY")
+
+
 def make_client():
     import anthropic
 
-    if not (os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")):
+    key = next((os.environ[v] for v in KEY_ENV_VARS if os.environ.get(v)), None)
+    if key is None:
         raise RuntimeError(
-            "ANTHROPIC_API_KEY is not set (export it in your shell; never commit it)"
+            "No API key: set ANTHROPIC_API_KEY or ANTHROPIC_1ST_API_KEY in the environment "
+            "(never commit it)"
         )
-    return anthropic.Anthropic()
+    return anthropic.Anthropic(api_key=key)
 
 
 def _extract(message) -> tuple[str, dict | None]:
