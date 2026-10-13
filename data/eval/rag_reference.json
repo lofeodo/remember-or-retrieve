@@ -1,0 +1,1878 @@
+{
+ "source": "rag-with-receipts results/eval_report.json",
+ "source_commit": "6b8d032f405bd6be1058604f1e8259b77c21e2c2",
+ "judge_model": "claude-sonnet-5",
+ "summary": {
+  "question_count": 55,
+  "retrieval": {
+   "mean_precision": 0.21600000000000005,
+   "mean_recall": 0.88,
+   "mean_mrr": 0.7516666666666668,
+   "hit_rate": 0.96,
+   "count": 50
+  },
+  "retrieval_by_type": {
+   "multi_hop": {
+    "mean_precision": 0.26666666666666666,
+    "mean_recall": 0.6666666666666666,
+    "mean_mrr": 0.6055555555555556,
+    "hit_rate": 0.9333333333333333,
+    "count": 15
+   },
+   "single_hop": {
+    "mean_precision": 0.1942857142857144,
+    "mean_recall": 0.9714285714285714,
+    "mean_mrr": 0.8142857142857143,
+    "hit_rate": 0.9714285714285714,
+    "count": 35
+   }
+  },
+  "correctness_accuracy": 0.8363636363636363,
+  "correctness_by_type": {
+   "multi_hop": {
+    "accuracy": 0.4666666666666667,
+    "count": 15
+   },
+   "single_hop": {
+    "accuracy": 1.0,
+    "count": 35
+   }
+  },
+  "correctness_label_counts": {
+   "correct": 42,
+   "partially_correct": 1,
+   "incorrectly_abstained": 4,
+   "incorrect": 3,
+   "incorrectly_answered": 1,
+   "correct_abstention": 4
+  },
+  "error_count": 0,
+  "grounding": {
+   "grounded_rate": 0.948051948051948,
+   "contradicted_rate": 0.05194805194805195,
+   "ungrounded_rate": 0.0,
+   "fully_grounded_answer_rate": 0.9090909090909091,
+   "citation_count": 77,
+   "answer_count": 44
+  },
+  "grounding_by_type": {
+   "multi_hop": {
+    "grounded_rate": 1.0,
+    "contradicted_rate": 0.0,
+    "ungrounded_rate": 0.0,
+    "fully_grounded_answer_rate": 1.0,
+    "citation_count": 20,
+    "answer_count": 10
+   },
+   "single_hop": {
+    "grounded_rate": 0.9245283018867925,
+    "contradicted_rate": 0.07547169811320754,
+    "ungrounded_rate": 0.0,
+    "fully_grounded_answer_rate": 0.8787878787878788,
+    "citation_count": 53,
+    "answer_count": 33
+   }
+  },
+  "grounding_by_correctness_label": {
+   "correct": {
+    "grounded_rate": 0.9384615384615385,
+    "contradicted_rate": 0.06153846153846154,
+    "ungrounded_rate": 0.0,
+    "fully_grounded_answer_rate": 0.8974358974358975,
+    "citation_count": 65,
+    "answer_count": 39
+   },
+   "correct_abstention": {
+    "grounded_rate": 0.0,
+    "contradicted_rate": 0.0,
+    "ungrounded_rate": 0.0,
+    "fully_grounded_answer_rate": 0.0,
+    "citation_count": 0,
+    "answer_count": 0
+   },
+   "incorrect": {
+    "grounded_rate": 1.0,
+    "contradicted_rate": 0.0,
+    "ungrounded_rate": 0.0,
+    "fully_grounded_answer_rate": 1.0,
+    "citation_count": 6,
+    "answer_count": 3
+   },
+   "incorrectly_abstained": {
+    "grounded_rate": 0.0,
+    "contradicted_rate": 0.0,
+    "ungrounded_rate": 0.0,
+    "fully_grounded_answer_rate": 0.0,
+    "citation_count": 0,
+    "answer_count": 0
+   },
+   "incorrectly_answered": {
+    "grounded_rate": 1.0,
+    "contradicted_rate": 0.0,
+    "ungrounded_rate": 0.0,
+    "fully_grounded_answer_rate": 1.0,
+    "citation_count": 4,
+    "answer_count": 1
+   },
+   "partially_correct": {
+    "grounded_rate": 1.0,
+    "contradicted_rate": 0.0,
+    "ungrounded_rate": 0.0,
+    "fully_grounded_answer_rate": 1.0,
+    "citation_count": 2,
+    "answer_count": 1
+   }
+  }
+ },
+ "results": [
+  {
+   "question_id": "q001",
+   "answer": "Ranged is the attack style whose weapons have the largest range of possible attack ranges. Ranged weapons vary from as little as 1 tile (salamanders) up to 10 tiles (long-range crossbows on longrange style), giving a spread of about 9 tiles between the shortest and longest possible attack ranges. By contrast, melee weapons are essentially fixed at an attack range of 1 (with halberds being a special exception at 2), so melee's range of possible attack ranges is only about 1 tile.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Attack_range__004",
+     "claim": "Ranged weapons have the greatest variety of weapon attack ranges, varying from 3 up to 10 tiles, with salamanders being an exception at 1 tile and no longrange option."
+    },
+    {
+     "chunk_id": "Attack_range__001",
+     "claim": "Almost all melee weapons have an attack range of 1, with halberds being a special exception at range 2."
+    }
+   ],
+   "input_tokens": 3040,
+   "output_tokens": 383,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Attack_range__004",
+     "claim": "Ranged weapons have the greatest variety of weapon attack ranges, varying from 3 up to 10 tiles, with salamanders being an exception at 1 tile and no longrange option.",
+     "entailment_prob": 0.008967624045908451,
+     "contradiction_prob": 0.9710935354232788,
+     "neutral_prob": 0.01993883214890957,
+     "overlap_score": 0.7586206896551724,
+     "label": "contradicted"
+    },
+    {
+     "chunk_id": "Attack_range__001",
+     "claim": "Almost all melee weapons have an attack range of 1, with halberds being a special exception at range 2.",
+     "entailment_prob": 9.93659341474995e-05,
+     "contradiction_prob": 0.0009298467193730175,
+     "neutral_prob": 0.9989708662033081,
+     "overlap_score": 0.7777777777777778,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q002",
+   "answer": "OSRS follows a \"combat triangle\" where each combat style has an advantage over one of the others, forming a cycle:\n\n- **Melee (Warriors) is strong against Ranged (Rangers)** – melee armour deflects/resists projectiles and melee weapons penetrate the leather/dragonhide armour rangers wear, while melee's own armour gives strong resistance to arrows.\n- **Ranged (Rangers) is strong against Magic (Mages)** – ranged armour (leather/dragonhide) absorbs spells, and arrows/projectiles easily pierce the robes mages wear, letting rangers take down mages quickly due to their poor defensive armour.\n- **Magic (Mages) is strong against Melee (Warriors)** – spells are amplified by the metallic armour warriors wear and can hit through melee armour fairly easily, making mages effective against warriors especially if they keep their distance.\n\nThis is a rule of thumb rather than an absolute rule — any style can still defeat any other, but the triangle indicates which style has the natural advantage. It's reflected in armour bonuses (melee armour has strong melee/ranged defence, ranged armour has strong ranged attack and magic defence, magic armour has magic attack but weak ranged/melee defence) and in color coding (melee=red, ranged=green, magic=blue) used in game mechanics like attack warnings.</answer>\n<parameter name=\"citations\">[{\"chunk_id\": \"Combat_triangle__000\", \"claim\": \"Melee tends to be effective against rangers, ranged tends to be effective against mages, and magic tends to be strong against warriors; this manifests in combat bonuses, attacking from distance, and color coding (melee=red, ranged=green, magic=blue).\"}, {\"chunk_id\": \"Combat_triangle__001\", \"claim\": \"Warriors are strong against rangers because melee armour deflects projectiles and melee weapons penetrate leather/dragonhide armour; melee armour resists arrows and melee attacks well.\"}, {\"chunk_id\": \"Combat_triangle__002\", \"claim\": \"Rangers are strong against mages because ranged armour absorbs spells and projectiles pierce mage robes, allowing rangers to take down mages quickly due to their poor defensive armour.\"}, {\"chunk_id\": \"Combat_triangle__003\", \"claim\": \"Mages are strong against warriors as long as they keep distance, since magic is amplified by metallic armour and can hit through melee armour fairly easily.\"}, {\"chunk_id\": \"Melee__000\", \"claim\": \"Melee-users tend to be strong against rangers but weak to mages, and melee armour has high resistance to ranged attacks.\"}]",
+   "answerable": true,
+   "citations": [],
+   "input_tokens": 2711,
+   "output_tokens": 965,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [],
+   "error": null
+  },
+  {
+   "question_id": "q003",
+   "answer": "A Monkey Guard has a combat level of 167.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Monkey_Guard__000",
+     "claim": "Monkey Guard combat level: 167"
+    },
+    {
+     "chunk_id": "Monkey_Guard__001",
+     "claim": "Monkey Guards are level 167 gorillas that reside in the Temple of Marimbo"
+    }
+   ],
+   "input_tokens": 3450,
+   "output_tokens": 193,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Monkey_Guard__000",
+     "claim": "Monkey Guard combat level: 167",
+     "entailment_prob": 0.9959009289741516,
+     "contradiction_prob": 0.0007080759387463331,
+     "neutral_prob": 0.003391006961464882,
+     "overlap_score": 0.8,
+     "label": "grounded"
+    },
+    {
+     "chunk_id": "Monkey_Guard__001",
+     "claim": "Monkey Guards are level 167 gorillas that reside in the Temple of Marimbo",
+     "entailment_prob": 0.0004191376792732626,
+     "contradiction_prob": 0.00023227992642205209,
+     "neutral_prob": 0.9993485808372498,
+     "overlap_score": 1.0,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q004",
+   "answer": "A Giant skeleton found in Tarn's Lair has a drop rate of 1/128 for a medium clue scroll (the monster is level 100).",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Clue_scroll__medium__014",
+     "claim": "Giant skeleton (Tarn's Lair), Level 100, drops a medium clue scroll at a rarity of 1/128"
+    }
+   ],
+   "input_tokens": 4530,
+   "output_tokens": 197,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Clue_scroll__medium__014",
+     "claim": "Giant skeleton (Tarn's Lair), Level 100, drops a medium clue scroll at a rarity of 1/128",
+     "entailment_prob": 0.969761312007904,
+     "contradiction_prob": 0.006090155337005854,
+     "neutral_prob": 0.02414850704371929,
+     "overlap_score": 0.7058823529411765,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q005",
+   "answer": "A ring of life automatically teleports its wearer to their respawn point if, while worn, the wearer is attacked and their Hitpoints drop to 10% or less of their maximum (as long as the hit doesn't kill them outright). This can also be triggered by self-inflicted damage, such as from a dwarven rock cake or a locator orb. In Wintertodt, it instead activates if the player's warmth drops below 10%. Note that if a phoenix necklace is also worn, the necklace's effect triggers first, and in PvP the Tele Block spell prevents the ring from activating. After activation, the ring crumbles to dust.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Ring_of_life__001",
+     "claim": "While worn, if the wearer is attacked and has 10% or less of their Hitpoints remaining, the ring automatically teleports the wearer to their respawn point, then crumbles to dust."
+    },
+    {
+     "chunk_id": "Ring_of_life__001",
+     "claim": "Self-inflicted damage, such as guzzling a dwarven rock cake or using a locator orb, can also activate the effect; if worn with a phoenix necklace, the necklace triggers first; Tele Block prevents activation in PvP."
+    },
+    {
+     "chunk_id": "Ring_of_life__001",
+     "claim": "In Wintertodt, the ring will activate if warmth drops below 10%."
+    },
+    {
+     "chunk_id": "Hitpoints__006",
+     "claim": "Ring of life can prevent accidental deaths by automatically teleporting the player safely back to their respawn point if they take a hit which causes them to fall to or below 10% of their maximum Hitpoints, as long as that hit does not kill them outright."
+    }
+   ],
+   "input_tokens": 3656,
+   "output_tokens": 626,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Ring_of_life__001",
+     "claim": "While worn, if the wearer is attacked and has 10% or less of their Hitpoints remaining, the ring automatically teleports the wearer to their respawn point, then crumbles to dust.",
+     "entailment_prob": 0.0004966579144820571,
+     "contradiction_prob": 0.0014026158023625612,
+     "neutral_prob": 0.9981008172035217,
+     "overlap_score": 0.96,
+     "label": "grounded"
+    },
+    {
+     "chunk_id": "Ring_of_life__001",
+     "claim": "Self-inflicted damage, such as guzzling a dwarven rock cake or using a locator orb, can also activate the effect; if worn with a phoenix necklace, the necklace triggers first; Tele Block prevents activation in PvP.",
+     "entailment_prob": 0.0038493690080940723,
+     "contradiction_prob": 0.0034259434323757887,
+     "neutral_prob": 0.9927247166633606,
+     "overlap_score": 0.9375,
+     "label": "grounded"
+    },
+    {
+     "chunk_id": "Ring_of_life__001",
+     "claim": "In Wintertodt, the ring will activate if warmth drops below 10%.",
+     "entailment_prob": 0.0011773707810789347,
+     "contradiction_prob": 0.00110964709892869,
+     "neutral_prob": 0.9977129697799683,
+     "overlap_score": 1.0,
+     "label": "grounded"
+    },
+    {
+     "chunk_id": "Hitpoints__006",
+     "claim": "Ring of life can prevent accidental deaths by automatically teleporting the player safely back to their respawn point if they take a hit which causes them to fall to or below 10% of their maximum Hitpoints, as long as that hit does not kill them outright.",
+     "entailment_prob": 0.9967153072357178,
+     "contradiction_prob": 4.893646837444976e-05,
+     "neutral_prob": 0.0032357601448893547,
+     "overlap_score": 1.0,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q006",
+   "answer": "One amylase crystal is required per dose when making stamina potions from a super energy potion (each dose requires one amylase crystal and grants 25.5 Herblore experience).",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Stamina_potion__001",
+     "claim": "A stamina potion can be made at level 77 Herblore by mixing a super energy potion with amylase crystals, with each dose requiring one amylase crystal."
+    }
+   ],
+   "input_tokens": 3841,
+   "output_tokens": 208,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Stamina_potion__001",
+     "claim": "A stamina potion can be made at level 77 Herblore by mixing a super energy potion with amylase crystals, with each dose requiring one amylase crystal.",
+     "entailment_prob": 0.0005110914935357869,
+     "contradiction_prob": 0.0008941988344304264,
+     "neutral_prob": 0.9985947012901306,
+     "overlap_score": 0.9545454545454546,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q007",
+   "answer": "Eating a summer pie (it has two bites) restores 11 Hitpoints, restores 10% run energy, and grants a temporary +5 boost to the Agility skill per bite. After consuming both bites, an empty pie dish remains in the inventory. Because of its quick eat delay (1 tick/0.6s instead of the standard 3-tick/1.8s), it can be eaten in rapid succession, making it efficient for healing. The Agility boost is useful for passing Agility level requirements and increasing success chance on Agility obstacles (though it can't be used for certain requirements like Dragon Slayer II, the Ape Atoll Agility Course, or Saradomin's Encampment), and the empty pie dish is valued by some players (e.g., against the Chaos Elemental or Chaos Fanatic) because it helps prevent a full inventory from triggering equipment-unequipping effects.</answer>\n<parameter name=\"citations\">[{\"chunk_id\":\"Summer_pie__001\",\"claim\":\"Summer pie is a type of pie with two bites that restores 11 Hitpoints, 10% run energy, and grants a +5 temporary skill boost to Agility per bite, with a pie dish remaining after consumption.\"},{\"chunk_id\":\"Summer_pie__001\",\"claim\":\"Summer pies are a type of 1 tick (0.6 seconds) fast food, allowing quicker consecutive eating than standard food's 3-tick penalty, making them efficient for healing.\"},{\"chunk_id\":\"Summer_pie__001\",\"claim\":\"The +5 Agility boost helps pass Agility level requirements and increases success on Agility obstacles, except for certain requirements like Dragon Slayer II, the Ape Atoll Agility Course, or Saradomin's Encampment.\"},{\"chunk_id\":\"Summer_pie__001\",\"claim\":\"Summer pies are popular for fighting the Chaos Elemental or Chaos Fanatic because the empty pie dish prevents their special attacks from un-equipping Worn Equipment due to a full inventory.\"}]",
+   "answerable": true,
+   "citations": [],
+   "input_tokens": 3565,
+   "output_tokens": 759,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [],
+   "error": null
+  },
+  {
+   "question_id": "q008",
+   "answer": "No. Regular snakes (Serpentes Fellis) found on Karamja do not inflict poison, unlike bush snakes.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Snake__001",
+     "claim": "Snakes found on Karamja do not inflict poison, unlike bush snakes."
+    }
+   ],
+   "input_tokens": 3589,
+   "output_tokens": 168,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Snake__001",
+     "claim": "Snakes found on Karamja do not inflict poison, unlike bush snakes.",
+     "entailment_prob": 0.9977039694786072,
+     "contradiction_prob": 0.00015814935613889247,
+     "neutral_prob": 0.002137859584763646,
+     "overlap_score": 1.0,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q009",
+   "answer": "Regular snakes have a 100% drop of 1 bones. They also have a chance (1/4) to drop a Snake spine (m).",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Snake__002",
+     "claim": "Snakes always drop 1 bones (100% drop) and have a 1/4 chance to drop a Snake spine (m)."
+    }
+   ],
+   "input_tokens": 3348,
+   "output_tokens": 183,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Snake__002",
+     "claim": "Snakes always drop 1 bones (100% drop) and have a 1/4 chance to drop a Snake spine (m).",
+     "entailment_prob": 0.012234474532306194,
+     "contradiction_prob": 0.011543672531843185,
+     "neutral_prob": 0.9762218594551086,
+     "overlap_score": 0.6666666666666666,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q010",
+   "answer": "Mithril seeds were released on 24 September 2002.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Mithril_seeds__000",
+     "claim": "Mithril seeds were released on 24 September 2002."
+    }
+   ],
+   "input_tokens": 3027,
+   "output_tokens": 140,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Mithril_seeds__000",
+     "claim": "Mithril seeds were released on 24 September 2002.",
+     "entailment_prob": 0.9978700876235962,
+     "contradiction_prob": 0.0003907610953319818,
+     "neutral_prob": 0.0017391599249094725,
+     "overlap_score": 0.75,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q011",
+   "answer": "The Attack skill was released on 4 January 2001, as part of the initial batch of skills when the game launched.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Attack__000",
+     "claim": "Attack skill was released on 4 January 2001"
+    },
+    {
+     "chunk_id": "Skills__006",
+     "claim": "Attack was part of the initial batch of skills released on 4 January 2001"
+    }
+   ],
+   "input_tokens": 3962,
+   "output_tokens": 195,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Attack__000",
+     "claim": "Attack skill was released on 4 January 2001",
+     "entailment_prob": 0.9932031631469727,
+     "contradiction_prob": 0.00020008224237244576,
+     "neutral_prob": 0.006596709601581097,
+     "overlap_score": 0.5,
+     "label": "grounded"
+    },
+    {
+     "chunk_id": "Skills__006",
+     "claim": "Attack was part of the initial batch of skills released on 4 January 2001",
+     "entailment_prob": 0.20058651268482208,
+     "contradiction_prob": 0.18545867502689362,
+     "neutral_prob": 0.6139547824859619,
+     "overlap_score": 0.9230769230769231,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q012",
+   "answer": "In RuneScape Classic, the maximum combat level was 123, due to an alternative combat level formula used at the time.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Combat_level__007",
+     "claim": "In RuneScape Classic, the maximum combat level is 123 due to an alternative combat level formula."
+    }
+   ],
+   "input_tokens": 3095,
+   "output_tokens": 171,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Combat_level__007",
+     "claim": "In RuneScape Classic, the maximum combat level is 123 due to an alternative combat level formula.",
+     "entailment_prob": 0.8663031458854675,
+     "contradiction_prob": 0.0003142461646348238,
+     "neutral_prob": 0.1333826631307602,
+     "overlap_score": 1.0,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q013",
+   "answer": "According to the combat triangle, Magic (Mages) is strong against Melee (Warriors).",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Combat_triangle__000",
+     "claim": "magic tends to be strong against warriors"
+    },
+    {
+     "chunk_id": "Combat_triangle__003",
+     "claim": "Mages are strong against warriors as long as they keep their distance"
+    }
+   ],
+   "input_tokens": 2937,
+   "output_tokens": 192,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Combat_triangle__000",
+     "claim": "magic tends to be strong against warriors",
+     "entailment_prob": 0.0008663915214128792,
+     "contradiction_prob": 0.010879665613174438,
+     "neutral_prob": 0.9882539510726929,
+     "overlap_score": 1.0,
+     "label": "grounded"
+    },
+    {
+     "chunk_id": "Combat_triangle__003",
+     "claim": "Mages are strong against warriors as long as they keep their distance",
+     "entailment_prob": 0.0010661212727427483,
+     "contradiction_prob": 0.000109655644337181,
+     "neutral_prob": 0.9988241791725159,
+     "overlap_score": 1.0,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q014",
+   "answer": "Vorkath's dragonfire (being a dragon boss that uses stronger, long-ranged dragonfire) can hit up to 80 damage if the player is completely unprotected. With protection, this maximum is reduced - for example, using an anti-dragon shield alone reduces the max hit to 70, Protect from Magic alone reduces it to 60, an antifire potion reduces it to 20, and a super antifire potion reduces the max hit to 10 (with further reductions when protections are combined).",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Dragonfire__001",
+     "claim": "Stronger dragons, such as Vorkath, can hit up to 80 with their dragonfire."
+    },
+    {
+     "chunk_id": "Dragonfire__006",
+     "claim": "Vorkath's unprotected dragonfire max hit is 80, reduced to varying degrees (e.g., 70 with anti-dragon shield, 60 with Protect from Magic, 20 with antifire potion, 10 with super antifire potion) depending on protection used."
+    }
+   ],
+   "input_tokens": 4174,
+   "output_tokens": 405,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Dragonfire__001",
+     "claim": "Stronger dragons, such as Vorkath, can hit up to 80 with their dragonfire.",
+     "entailment_prob": 0.39849281311035156,
+     "contradiction_prob": 0.002064205938950181,
+     "neutral_prob": 0.5994429588317871,
+     "overlap_score": 1.0,
+     "label": "grounded"
+    },
+    {
+     "chunk_id": "Dragonfire__006",
+     "claim": "Vorkath's unprotected dragonfire max hit is 80, reduced to varying degrees (e.g., 70 with anti-dragon shield, 60 with Protect from Magic, 20 with antifire potion, 10 with super antifire potion) depending on protection used.",
+     "entailment_prob": 0.0003206621913705021,
+     "contradiction_prob": 0.9986960291862488,
+     "neutral_prob": 0.0009834085358306766,
+     "overlap_score": 0.625,
+     "label": "contradicted"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q015",
+   "answer": "The Hitpoints skill is also known as \"health\" or \"HP\".",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Hitpoints__001",
+     "claim": "Hitpoints (also known as \"health\" or \"HP\") represent a player's health."
+    },
+    {
+     "chunk_id": "Hitpoints__000",
+     "claim": "Also called: HP, health"
+    }
+   ],
+   "input_tokens": 2777,
+   "output_tokens": 187,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Hitpoints__001",
+     "claim": "Hitpoints (also known as \"health\" or \"HP\") represent a player's health.",
+     "entailment_prob": 0.9453025460243225,
+     "contradiction_prob": 0.009022668935358524,
+     "neutral_prob": 0.04567477107048035,
+     "overlap_score": 1.0,
+     "label": "grounded"
+    },
+    {
+     "chunk_id": "Hitpoints__000",
+     "claim": "Also called: HP, health",
+     "entailment_prob": 0.987126886844635,
+     "contradiction_prob": 0.005291903391480446,
+     "neutral_prob": 0.007581252604722977,
+     "overlap_score": 1.0,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q016",
+   "answer": "The Phoenix necklace automatically restores the wearer's Hitpoints by 30% of their maximum, and it triggers when the wearer's Hitpoints drop below 20% of their maximum.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Hitpoints__006",
+     "claim": "Phoenix necklaces automatically restore the wearer's Hitpoints by 30% of their maximum if their Hitpoints drop below 20% of their maximum."
+    }
+   ],
+   "input_tokens": 3670,
+   "output_tokens": 220,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Hitpoints__006",
+     "claim": "Phoenix necklaces automatically restore the wearer's Hitpoints by 30% of their maximum if their Hitpoints drop below 20% of their maximum.",
+     "entailment_prob": 0.9942278861999512,
+     "contradiction_prob": 8.77768688951619e-05,
+     "neutral_prob": 0.005684275645762682,
+     "overlap_score": 1.0,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q017",
+   "answer": "A Poison Scorpion's poison attack starts off dealing 3 damage.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Poison__008",
+     "claim": "Poison Scorpion has an initial poison damage of 3."
+    }
+   ],
+   "input_tokens": 4172,
+   "output_tokens": 145,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Poison__008",
+     "claim": "Poison Scorpion has an initial poison damage of 3.",
+     "entailment_prob": 0.010712578892707825,
+     "contradiction_prob": 0.012769240885972977,
+     "neutral_prob": 0.9765180945396423,
+     "overlap_score": 0.625,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q018",
+   "answer": "The Saradomin godsword's special attack (\"Healing Blade\") restores the user's Prayer points by 25% of the damage dealt, rounded up, with a minimum restoration of 5 Prayer points.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Prayer__006",
+     "claim": "The Saradomin godsword recharges Prayer by 25% of the damage dealt, rounded up."
+    },
+    {
+     "chunk_id": "Prayer__022",
+     "claim": "If the Saradomin godsword's special attack hits successfully, it restores the user's Prayer by 25% of damage dealt (minimum of 5 prayer points)."
+    },
+    {
+     "chunk_id": "Special_attacks__008",
+     "claim": "The Saradomin godsword's special attack restores the user's Prayer by 25% of damage dealt, with a minimum of 5 Prayer points, and has no effect if it misses completely."
+    }
+   ],
+   "input_tokens": 3614,
+   "output_tokens": 363,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Prayer__006",
+     "claim": "The Saradomin godsword recharges Prayer by 25% of the damage dealt, rounded up.",
+     "entailment_prob": 0.0022623026743531227,
+     "contradiction_prob": 0.00044196879025548697,
+     "neutral_prob": 0.9972956776618958,
+     "overlap_score": 1.0,
+     "label": "grounded"
+    },
+    {
+     "chunk_id": "Prayer__022",
+     "claim": "If the Saradomin godsword's special attack hits successfully, it restores the user's Prayer by 25% of damage dealt (minimum of 5 prayer points).",
+     "entailment_prob": 0.0013294497039169073,
+     "contradiction_prob": 0.0017590641509741545,
+     "neutral_prob": 0.9969114661216736,
+     "overlap_score": 0.9523809523809523,
+     "label": "grounded"
+    },
+    {
+     "chunk_id": "Special_attacks__008",
+     "claim": "The Saradomin godsword's special attack restores the user's Prayer by 25% of damage dealt, with a minimum of 5 Prayer points, and has no effect if it misses completely.",
+     "entailment_prob": 0.9917187690734863,
+     "contradiction_prob": 0.0001536109484732151,
+     "neutral_prob": 0.008127623237669468,
+     "overlap_score": 1.0,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q019",
+   "answer": "A player will automatically retaliate (1 tick after being attacked) for up to 20 minutes of idle combat with no player input. After that 20-minute period, Auto Retaliate effectively stops working, and players will cease attacking altogether even if they continue to be attacked by monsters.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Auto_Retaliate__000",
+     "claim": "The player will attempt to automatically retaliate 1 tick after being attacked for 20 minutes if no player input is given, after which players stop attacking altogether even if attacked by monsters."
+    },
+    {
+     "chunk_id": "Auto_Retaliate__000",
+     "claim": "This 20-minute idle combat limit was implemented via an update on 10 September 2015 to reduce the effectiveness of AFK training."
+    }
+   ],
+   "input_tokens": 3328,
+   "output_tokens": 326,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Auto_Retaliate__000",
+     "claim": "The player will attempt to automatically retaliate 1 tick after being attacked for 20 minutes if no player input is given, after which players stop attacking altogether even if attacked by monsters.",
+     "entailment_prob": 0.0005375921027734876,
+     "contradiction_prob": 0.0007781829335726798,
+     "neutral_prob": 0.9986842274665833,
+     "overlap_score": 0.9285714285714286,
+     "label": "grounded"
+    },
+    {
+     "chunk_id": "Auto_Retaliate__000",
+     "claim": "This 20-minute idle combat limit was implemented via an update on 10 September 2015 to reduce the effectiveness of AFK training.",
+     "entailment_prob": 0.0008717640885151923,
+     "contradiction_prob": 0.0003447388589847833,
+     "neutral_prob": 0.998783528804779,
+     "overlap_score": 0.8636363636363636,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q020",
+   "answer": "To use Vannaka as a Slayer master, you need 40 combat level (or 99 Slayer) — he is located in the Edgeville Dungeon.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Slayer_training__003",
+     "claim": "Vannaka, located in Edgeville Dungeon, requires 40 combat or 99 Slayer to use."
+    },
+    {
+     "chunk_id": "Combat_level__001",
+     "claim": "Vannaka requires a combat level of 40."
+    }
+   ],
+   "input_tokens": 3906,
+   "output_tokens": 226,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Slayer_training__003",
+     "claim": "Vannaka, located in Edgeville Dungeon, requires 40 combat or 99 Slayer to use.",
+     "entailment_prob": 0.9964185953140259,
+     "contradiction_prob": 0.00031655727070756257,
+     "neutral_prob": 0.0032648430205881596,
+     "overlap_score": 0.8461538461538461,
+     "label": "grounded"
+    },
+    {
+     "chunk_id": "Combat_level__001",
+     "claim": "Vannaka requires a combat level of 40.",
+     "entailment_prob": 0.0021225649397820234,
+     "contradiction_prob": 0.0025488005485385656,
+     "neutral_prob": 0.9953286647796631,
+     "overlap_score": 1.0,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q021",
+   "answer": "It costs 100 Slayer reward points to permanently block a task with Duradel/Kuradal.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Slayer_training__024",
+     "claim": "Blocking a task with Duradel/Kuradal costs 100 points."
+    }
+   ],
+   "input_tokens": 3645,
+   "output_tokens": 158,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Slayer_training__024",
+     "claim": "Blocking a task with Duradel/Kuradal costs 100 points.",
+     "entailment_prob": 0.00014078874664846808,
+     "contradiction_prob": 0.9239434003829956,
+     "neutral_prob": 0.07591579109430313,
+     "overlap_score": 0.8888888888888888,
+     "label": "contradicted"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q022",
+   "answer": "After unlocking \"Bigger and Badder\" (which requires 50 Slayer points), killing certain monsters has a 1/200 chance of attracting a superior variant of that monster.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Slayer_training__032",
+     "claim": "With the Bigger and Badder perk unlocked (requiring 50 Slayer points), several monsters have a 1/200 chance of attracting a superior variant of the monster after they are killed."
+    }
+   ],
+   "input_tokens": 3809,
+   "output_tokens": 221,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Slayer_training__032",
+     "claim": "With the Bigger and Badder perk unlocked (requiring 50 Slayer points), several monsters have a 1/200 chance of attracting a superior variant of the monster after they are killed.",
+     "entailment_prob": 0.0005010163295082748,
+     "contradiction_prob": 0.00016021753253880888,
+     "neutral_prob": 0.999338686466217,
+     "overlap_score": 1.0,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q023",
+   "answer": "The Druidic Ritual quest must be completed before Herblore training can begin, and it grants level 3 Herblore.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Herblore_training__000",
+     "claim": "Herblore training usually involves making potions which can only begin after completing the Druidic Ritual quest granting the player level 3 Herblore."
+    }
+   ],
+   "input_tokens": 3021,
+   "output_tokens": 184,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Herblore_training__000",
+     "claim": "Herblore training usually involves making potions which can only begin after completing the Druidic Ritual quest granting the player level 3 Herblore.",
+     "entailment_prob": 0.00029924025875516236,
+     "contradiction_prob": 0.0012742762919515371,
+     "neutral_prob": 0.9984265565872192,
+     "overlap_score": 1.0,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q024",
+   "answer": "Using the auto-clean method, you can expect to clean up to 3,000 grimy herbs per hour.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Herblore_training__026",
+     "claim": "By using the auto-clean method, you can expect to clean up to 3,000 herbs per hour."
+    }
+   ],
+   "input_tokens": 4168,
+   "output_tokens": 167,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Herblore_training__026",
+     "claim": "By using the auto-clean method, you can expect to clean up to 3,000 herbs per hour.",
+     "entailment_prob": 0.0004063112719450146,
+     "contradiction_prob": 0.001490107155404985,
+     "neutral_prob": 0.9981034994125366,
+     "overlap_score": 1.0,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q025",
+   "answer": "Monkey Madness I was released on 6 December 2004.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Monkey_Madness_I__000",
+     "claim": "Monkey Madness I was released on 6 December 2004."
+    }
+   ],
+   "input_tokens": 1997,
+   "output_tokens": 145,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Monkey_Madness_I__000",
+     "claim": "Monkey Madness I was released on 6 December 2004.",
+     "entailment_prob": 0.9980303645133972,
+     "contradiction_prob": 5.937884998274967e-05,
+     "neutral_prob": 0.0019102315418422222,
+     "overlap_score": 0.4444444444444444,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q026",
+   "answer": "To start Monkey Madness I, you need: a gold bar, five empty inventory slots, a ball of wool, monkey bones or a corpse from Karamja (obtainable during the quest), and five bananas (obtainable during the quest).",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Monkey_Madness_I__003",
+     "claim": "Items required: a gold bar, five empty inventory slots, a ball of wool, monkey bones or corpse from Karamja (obtainable during quest), five bananas (obtainable during quest)"
+    }
+   ],
+   "input_tokens": 3631,
+   "output_tokens": 246,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Monkey_Madness_I__003",
+     "claim": "Items required: a gold bar, five empty inventory slots, a ball of wool, monkey bones or corpse from Karamja (obtainable during quest), five bananas (obtainable during quest)",
+     "entailment_prob": 0.9919567108154297,
+     "contradiction_prob": 0.00048270553816109896,
+     "neutral_prob": 0.007560592144727707,
+     "overlap_score": 1.0,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q027",
+   "answer": "Completing Monkey Madness I rewards you with 3 Quest points and 10,000 Coins (along with 3 Diamonds and a choice of combat experience rewards).",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Monkey_Madness_I__021",
+     "claim": "Monkey Madness I rewards 3 Quest points and 10,000 Coins"
+    },
+    {
+     "chunk_id": "Monkey_Madness_I_Quick_guide__014",
+     "claim": "Monkey Madness I rewards 3 Quest points and 10,000 Coins"
+    }
+   ],
+   "input_tokens": 3540,
+   "output_tokens": 254,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Monkey_Madness_I__021",
+     "claim": "Monkey Madness I rewards 3 Quest points and 10,000 Coins",
+     "entailment_prob": 0.006958712823688984,
+     "contradiction_prob": 0.0040087285451591015,
+     "neutral_prob": 0.989032506942749,
+     "overlap_score": 0.9090909090909091,
+     "label": "grounded"
+    },
+    {
+     "chunk_id": "Monkey_Madness_I_Quick_guide__014",
+     "claim": "Monkey Madness I rewards 3 Quest points and 10,000 Coins",
+     "entailment_prob": 0.08232042193412781,
+     "contradiction_prob": 0.015334511175751686,
+     "neutral_prob": 0.9023450016975403,
+     "overlap_score": 0.9090909090909091,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q028",
+   "answer": "Players receive a stuffed monkey as a reward for being caught and jailed for the 100th time during Monkey Madness I.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Monkey_Madness_I__024",
+     "claim": "Additionally, the player will receive a stuffed monkey as a reward when being caught for the 100th time."
+    },
+    {
+     "chunk_id": "Stuffed_monkey__002",
+     "claim": "Lumo and Bunkdo will reward the player with a stuffed monkey if they are caught and imprisoned 100 times on Ape Atoll."
+    }
+   ],
+   "input_tokens": 3450,
+   "output_tokens": 256,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Monkey_Madness_I__024",
+     "claim": "Additionally, the player will receive a stuffed monkey as a reward when being caught for the 100th time.",
+     "entailment_prob": 0.97337406873703,
+     "contradiction_prob": 0.0006345688598230481,
+     "neutral_prob": 0.02599133737385273,
+     "overlap_score": 1.0,
+     "label": "grounded"
+    },
+    {
+     "chunk_id": "Stuffed_monkey__002",
+     "claim": "Lumo and Bunkdo will reward the player with a stuffed monkey if they are caught and imprisoned 100 times on Ape Atoll.",
+     "entailment_prob": 0.9957084655761719,
+     "contradiction_prob": 0.0002675858559086919,
+     "neutral_prob": 0.004023958463221788,
+     "overlap_score": 1.0,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q029",
+   "answer": "Glough appears in three quests: The Grand Tree, Monkey Madness I, and Monkey Madness II.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Glough__000",
+     "claim": "Glough's associated quests are The Grand Tree, Monkey Madness I, and Monkey Madness II."
+    },
+    {
+     "chunk_id": "Glough__002",
+     "claim": "Glough's schemes are thwarted in The Grand Tree quest, and once again in Monkey Madness I, with further events occurring in Monkey Madness II."
+    }
+   ],
+   "input_tokens": 3265,
+   "output_tokens": 246,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Glough__000",
+     "claim": "Glough's associated quests are The Grand Tree, Monkey Madness I, and Monkey Madness II.",
+     "entailment_prob": 0.9971852898597717,
+     "contradiction_prob": 0.00012748963490594178,
+     "neutral_prob": 0.0026871864683926105,
+     "overlap_score": 0.5384615384615384,
+     "label": "grounded"
+    },
+    {
+     "chunk_id": "Glough__002",
+     "claim": "Glough's schemes are thwarted in The Grand Tree quest, and once again in Monkey Madness I, with further events occurring in Monkey Madness II.",
+     "entailment_prob": 0.0003125687362626195,
+     "contradiction_prob": 0.0004289258213248104,
+     "neutral_prob": 0.9992584586143494,
+     "overlap_score": 0.8571428571428571,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q030",
+   "answer": "The Jungle Demon fought at the end of Monkey Madness I is a level 195 monster.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Monkey_Madness_I__018",
+     "claim": "Upon landing in the arena, you'll be confronted by a level 195 Jungle Demon"
+    },
+    {
+     "chunk_id": "Monkey_Madness_I__003",
+     "claim": "Enemies to defeat: Jungle Demon (level 195)"
+    }
+   ],
+   "input_tokens": 3828,
+   "output_tokens": 219,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Monkey_Madness_I__018",
+     "claim": "Upon landing in the arena, you'll be confronted by a level 195 Jungle Demon",
+     "entailment_prob": 0.0032271966338157654,
+     "contradiction_prob": 0.7628324627876282,
+     "neutral_prob": 0.23394034802913666,
+     "overlap_score": 1.0,
+     "label": "contradicted"
+    },
+    {
+     "chunk_id": "Monkey_Madness_I__003",
+     "claim": "Enemies to defeat: Jungle Demon (level 195)",
+     "entailment_prob": 0.5846753120422363,
+     "contradiction_prob": 0.08472367376089096,
+     "neutral_prob": 0.3306009769439697,
+     "overlap_score": 1.0,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q031",
+   "answer": "Kruk plays only a minor role in Monkey Madness I: the player must speak to him in order to be escorted to King Awowogei, which allows the quest to continue.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Kruk__003",
+     "claim": "Kruk plays a minor role in Monkey Madness I, where the player must speak to him to be escorted to King Awowogei and continue the quest."
+    }
+   ],
+   "input_tokens": 2618,
+   "output_tokens": 200,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Kruk__003",
+     "claim": "Kruk plays a minor role in Monkey Madness I, where the player must speak to him to be escorted to King Awowogei and continue the quest.",
+     "entailment_prob": 0.9968423843383789,
+     "contradiction_prob": 0.0002034380449913442,
+     "neutral_prob": 0.0029541547410190105,
+     "overlap_score": 0.9565217391304348,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q032",
+   "answer": "The chance of receiving a one-off medium clue scroll by manually feeding the monkey bananas during Monkey Madness I is 1/256.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Monkey__Monkey_Madness_I__003",
+     "claim": "You can obtain a one-off medium clue scroll from the monkey by manually feeding it bananas, with a 1/256 chance."
+    },
+    {
+     "chunk_id": "Monkey_Madness_I__017",
+     "claim": "There is a 1/256 chance that the monkey will give a clue scroll (medium) if you use bananas on him directly."
+    }
+   ],
+   "input_tokens": 3822,
+   "output_tokens": 266,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Monkey__Monkey_Madness_I__003",
+     "claim": "You can obtain a one-off medium clue scroll from the monkey by manually feeding it bananas, with a 1/256 chance.",
+     "entailment_prob": 0.9956784844398499,
+     "contradiction_prob": 0.0005527124740183353,
+     "neutral_prob": 0.003768871771171689,
+     "overlap_score": 0.9523809523809523,
+     "label": "grounded"
+    },
+    {
+     "chunk_id": "Monkey_Madness_I__017",
+     "claim": "There is a 1/256 chance that the monkey will give a clue scroll (medium) if you use bananas on him directly.",
+     "entailment_prob": 0.0005094799562357366,
+     "contradiction_prob": 0.003551705041900277,
+     "neutral_prob": 0.9959388971328735,
+     "overlap_score": 1.0,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q033",
+   "answer": "Two doses of antipoison are needed to fully cure venom. The first dose reduces the venom to regular poison, and the second dose then removes that poison entirely.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Antipoison__001",
+     "claim": "Drinking two doses of antipoison will cure venom. The first dose will reduce the venom to poison and the second will remove the poison."
+    },
+    {
+     "chunk_id": "Venom__002",
+     "claim": "Drinking a dose of any strength of antipoison converts venom to regular poison, and another dose fully cures it."
+    }
+   ],
+   "input_tokens": 3247,
+   "output_tokens": 252,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Antipoison__001",
+     "claim": "Drinking two doses of antipoison will cure venom. The first dose will reduce the venom to poison and the second will remove the poison.",
+     "entailment_prob": 0.0002076373202726245,
+     "contradiction_prob": 9.30729802348651e-05,
+     "neutral_prob": 0.9996993541717529,
+     "overlap_score": 1.0,
+     "label": "grounded"
+    },
+    {
+     "chunk_id": "Venom__002",
+     "claim": "Drinking a dose of any strength of antipoison converts venom to regular poison, and another dose fully cures it.",
+     "entailment_prob": 0.0008239985909312963,
+     "contradiction_prob": 0.002963089616969228,
+     "neutral_prob": 0.9962129592895508,
+     "overlap_score": 0.8823529411764706,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q034",
+   "answer": "Only 1 ball of wool is needed to make a M'speak amulet during Monkey Madness I.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Ball_of_wool__003",
+     "claim": "Monkey Madness I requires 1 × ball of wool to make a M'speak amulet"
+    },
+    {
+     "chunk_id": "M_speak_amulet__unstrung__001",
+     "claim": "The amulet can be completed using a ball of wool"
+    }
+   ],
+   "input_tokens": 3302,
+   "output_tokens": 215,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Ball_of_wool__003",
+     "claim": "Monkey Madness I requires 1 × ball of wool to make a M'speak amulet",
+     "entailment_prob": 0.9924405813217163,
+     "contradiction_prob": 0.0004434575967025012,
+     "neutral_prob": 0.007115976419299841,
+     "overlap_score": 0.9285714285714286,
+     "label": "grounded"
+    },
+    {
+     "chunk_id": "M_speak_amulet__unstrung__001",
+     "claim": "The amulet can be completed using a ball of wool",
+     "entailment_prob": 0.982466459274292,
+     "contradiction_prob": 0.0006009053322486579,
+     "neutral_prob": 0.016932683065533638,
+     "overlap_score": 1.0,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q035",
+   "answer": "The high alch value of a diamond is 1,200 coins.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Diamond__000",
+     "claim": "High alch value of a diamond is 1,200 coins"
+    }
+   ],
+   "input_tokens": 2908,
+   "output_tokens": 138,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Diamond__000",
+     "claim": "High alch value of a diamond is 1,200 coins",
+     "entailment_prob": 0.996278703212738,
+     "contradiction_prob": 0.0002516279637347907,
+     "neutral_prob": 0.003469703486189246,
+     "overlap_score": 0.6,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q036",
+   "answer": "Yes, Monkey Archers are aggressive, unless the player is holding a monkey greegree, in which case they will not attack.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Monkey_Archer__000",
+     "claim": "Monkey Archer is Aggressive: Yes (unless the player is holding a monkey greegree)"
+    },
+    {
+     "chunk_id": "Monkey_Archer__001",
+     "claim": "As with all creatures on Ape Atoll, Ninja Monkeys are not aggressive when holding any sort of greegree."
+    }
+   ],
+   "input_tokens": 2862,
+   "output_tokens": 248,
+   "judge_verdict": "partially_correct",
+   "correctness_label": "partially_correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Monkey_Archer__000",
+     "claim": "Monkey Archer is Aggressive: Yes (unless the player is holding a monkey greegree)",
+     "entailment_prob": 0.9967387318611145,
+     "contradiction_prob": 0.0001309216459048912,
+     "neutral_prob": 0.0031303979922086,
+     "overlap_score": 0.9090909090909091,
+     "label": "grounded"
+    },
+    {
+     "chunk_id": "Monkey_Archer__001",
+     "claim": "As with all creatures on Ape Atoll, Ninja Monkeys are not aggressive when holding any sort of greegree.",
+     "entailment_prob": 0.9942202568054199,
+     "contradiction_prob": 6.391348870238289e-05,
+     "neutral_prob": 0.005715890787541866,
+     "overlap_score": 1.0,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q037",
+   "answer": "The retrieved chunks list the quest rewards for Monkey Madness I (quest points, coins, diamonds, experience, dragon scimitar access, Ape Atoll access), but none of these listed rewards (coins, diamonds, dragon scimitar, Ape Atoll access, experience) have high-alchemy values provided. The items with high alch values shown (Enchanted bar, Monkey talisman, Karamjan monkey greegree, Monkey) are quest items used during the quest, not final completion rewards, so I cannot determine a combined high-alchemy value of the quest's rewards from this information.",
+   "answerable": false,
+   "citations": [],
+   "input_tokens": 2771,
+   "output_tokens": 275,
+   "judge_verdict": null,
+   "correctness_label": "incorrectly_abstained",
+   "citation_verdicts": [],
+   "error": null
+  },
+  {
+   "question_id": "q038",
+   "answer": "The Slayer training guide recommends the Amulet of rancour as the best necklace option for melee tasks. The amulet of rancour gives +25 to all melee attack bonuses, while the amulet of glory gives +10 to all melee attack bonuses. This means the amulet of rancour's melee attack bonus is 15 points greater than the amulet of glory's.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Slayer_training__011",
+     "claim": "For Melee tasks, use equipment that offers the highest strength and accuracy bonuses, such as Amulet of rancour..."
+    },
+    {
+     "chunk_id": "Attack__003",
+     "claim": "The amulet of rancour gives +25 to all melee attack bonuses, and the amulet of glory gives +10 to all melee attack bonuses."
+    }
+   ],
+   "input_tokens": 4623,
+   "output_tokens": 331,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Slayer_training__011",
+     "claim": "For Melee tasks, use equipment that offers the highest strength and accuracy bonuses, such as Amulet of rancour...",
+     "entailment_prob": 0.0035458626225590706,
+     "contradiction_prob": 0.0009163197828456759,
+     "neutral_prob": 0.9955378770828247,
+     "overlap_score": 1.0,
+     "label": "grounded"
+    },
+    {
+     "chunk_id": "Attack__003",
+     "claim": "The amulet of rancour gives +25 to all melee attack bonuses, and the amulet of glory gives +10 to all melee attack bonuses.",
+     "entailment_prob": 0.016734618693590164,
+     "contradiction_prob": 0.015676522627472878,
+     "neutral_prob": 0.9675889015197754,
+     "overlap_score": 1.0,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q039",
+   "answer": "The retrieved chunks confirm the Jungle Demon's combat level is 195, but none of them state Glough's combat level, so a comparison cannot be made from the given information.",
+   "answerable": false,
+   "citations": [],
+   "input_tokens": 3542,
+   "output_tokens": 133,
+   "judge_verdict": null,
+   "correctness_label": "incorrectly_abstained",
+   "citation_verdicts": [],
+   "error": null
+  },
+  {
+   "question_id": "q040",
+   "answer": "The retrieved chunks do not mention \"Kruk\" at all, so there is no information available about Kruk's max hit to compare with the Jungle Demon's max hit of 32.",
+   "answerable": false,
+   "citations": [],
+   "input_tokens": 3388,
+   "output_tokens": 134,
+   "judge_verdict": null,
+   "correctness_label": "incorrectly_abstained",
+   "citation_verdicts": [],
+   "error": null
+  },
+  {
+   "question_id": "q041",
+   "answer": "The Grand Exchange buy limit for Diamond is 11,000 per day. Crafting each diamond into a diamond ring (using a gold bar and ring mould) yields 85 Crafting XP per craft. Therefore, crafting all 11,000 diamonds into diamond rings would yield 11,000 × 85 = 935,000 Crafting XP.</answer>\n<parameter name=\"citations\">[{\"chunk_id\": \"Diamond__000\", \"claim\": \"The Grand Exchange buy limit for Diamond is 11,000 per day.\"}, {\"chunk_id\": \"Diamond__003\", \"claim\": \"Crafting a diamond into a diamond ring (with a gold bar) yields 85 XP per craft.\"}]",
+   "answerable": true,
+   "citations": [],
+   "input_tokens": 2843,
+   "output_tokens": 320,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [],
+   "error": null
+  },
+  {
+   "question_id": "q042",
+   "answer": "The Grand Exchange buy limit for Ball of wool is 13,000 per 4 hours, which equates to 6 buy cycles in a day (24 hours ÷ 4 hours = 6), giving a theoretical daily buy limit of 78,000 balls of wool. A Wig requires 3 balls of wool. Therefore, 78,000 ÷ 3 = 26,000 Wigs could theoretically be crafted from one day's full Grand Exchange buy limit of balls of wool.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Ball_of_wool__000",
+     "claim": "Buy limit: 13,000"
+    },
+    {
+     "chunk_id": "Ball_of_wool__006",
+     "claim": "Wig requires 3 × Ball of wool"
+    }
+   ],
+   "input_tokens": 2168,
+   "output_tokens": 323,
+   "judge_verdict": "incorrect",
+   "correctness_label": "incorrect",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Ball_of_wool__000",
+     "claim": "Buy limit: 13,000",
+     "entailment_prob": 0.719535768032074,
+     "contradiction_prob": 0.249952033162117,
+     "neutral_prob": 0.030512169003486633,
+     "overlap_score": 1.0,
+     "label": "grounded"
+    },
+    {
+     "chunk_id": "Ball_of_wool__006",
+     "claim": "Wig requires 3 × Ball of wool",
+     "entailment_prob": 0.9279776215553284,
+     "contradiction_prob": 0.0016579750226810575,
+     "neutral_prob": 0.07036438584327698,
+     "overlap_score": 0.8333333333333334,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q043",
+   "answer": "The Slayer requirement is higher. Dark beasts can only be assigned at Slayer level 90, whereas a Combat potion only requires level 36 Herblore to make (level 40 for the mix version). That means Slayer's requirement is 54 levels higher than Herblore's requirement (90 - 36 = 54).",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Slayer_training__046",
+     "claim": "Dark beasts require Slayer level 90 to be assigned as a task"
+    },
+    {
+     "chunk_id": "Melee__012",
+     "claim": "Combat potion requires level 36 Herblore to make (40 for the mix version)"
+    }
+   ],
+   "input_tokens": 3364,
+   "output_tokens": 279,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Slayer_training__046",
+     "claim": "Dark beasts require Slayer level 90 to be assigned as a task",
+     "entailment_prob": 0.007610135246068239,
+     "contradiction_prob": 0.0023637020494788885,
+     "neutral_prob": 0.9900261163711548,
+     "overlap_score": 0.75,
+     "label": "grounded"
+    },
+    {
+     "chunk_id": "Melee__012",
+     "claim": "Combat potion requires level 36 Herblore to make (40 for the mix version)",
+     "entailment_prob": 0.09512383490800858,
+     "contradiction_prob": 0.05624276399612427,
+     "neutral_prob": 0.8486334085464478,
+     "overlap_score": 0.8461538461538461,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q044",
+   "answer": "The maximum coin stack in OSRS is 2,147,483,647 coins (a 32-bit signed integer limit, informally called \"max cash\"). Diamonds have a Grand Exchange price of 1,577 coins each. Dividing the max cash by the diamond price gives approximately 2,147,483,647 / 1,577 ≈ 1,361,752 diamonds that could be purchased before exhausting a max coin stack.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Coins__030",
+     "claim": "The maximum number of coins in a stack is 2,147,483,647, due to RuneScape's use of 32-bit signed integers; this is informally called max cash."
+    },
+    {
+     "chunk_id": "Diamond__000",
+     "claim": "Diamond's Grand Exchange price is 1,577 coins."
+    }
+   ],
+   "input_tokens": 2412,
+   "output_tokens": 335,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Coins__030",
+     "claim": "The maximum number of coins in a stack is 2,147,483,647, due to RuneScape's use of 32-bit signed integers; this is informally called max cash.",
+     "entailment_prob": 0.9415066838264465,
+     "contradiction_prob": 0.00010768453648779541,
+     "neutral_prob": 0.058385640382766724,
+     "overlap_score": 0.8888888888888888,
+     "label": "grounded"
+    },
+    {
+     "chunk_id": "Diamond__000",
+     "claim": "Diamond's Grand Exchange price is 1,577 coins.",
+     "entailment_prob": 0.9935454726219177,
+     "contradiction_prob": 0.0003918487927876413,
+     "neutral_prob": 0.006062683649361134,
+     "overlap_score": 0.4444444444444444,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q045",
+   "answer": "Monkey Madness I recommends a Prayer level of 43, while the bare minimum Prayer level needed to use Protect from Magic is 37 (as noted in the Jungle Demon fight guide, where 37 Prayer unlocks Protect from Magic). This gives a buffer of 43 − 37 = 6 Prayer levels.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Monkey_Madness_I__003",
+     "claim": "Monkey Madness I recommends 43 Prayer."
+    },
+    {
+     "chunk_id": "Jungle_Demon__002",
+     "claim": "37 Prayer is needed for Protect from Magic, which makes the Jungle Demon fight considerably easier."
+    }
+   ],
+   "input_tokens": 4143,
+   "output_tokens": 301,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Monkey_Madness_I__003",
+     "claim": "Monkey Madness I recommends 43 Prayer.",
+     "entailment_prob": 0.7048634886741638,
+     "contradiction_prob": 0.01526728831231594,
+     "neutral_prob": 0.2798692286014557,
+     "overlap_score": 0.5,
+     "label": "grounded"
+    },
+    {
+     "chunk_id": "Jungle_Demon__002",
+     "claim": "37 Prayer is needed for Protect from Magic, which makes the Jungle Demon fight considerably easier.",
+     "entailment_prob": 0.9885226488113403,
+     "contradiction_prob": 2.848405893018935e-05,
+     "neutral_prob": 0.011448852717876434,
+     "overlap_score": 0.75,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q046",
+   "answer": "Antipoison(1) has a Grand Exchange buy limit of 2,000 (this is the limit tracked on the item page, which corresponds to the single-dose Antipoison item). Making one Antipoison(3) potion yields a profit after GE tax of −625 coins (a loss), based on the cost of a Marrentill potion (unf) plus unicorn horn dust, minus the GE-taxed sale price of the resulting Antipoison(3). If a player made 2,000 such potions (matching the buy limit figure given for Antipoison), the total loss after GE tax would be 2,000 × −625 = −1,250,000 coins, i.e., a loss of 1,250,000 coins.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Antipoison__000",
+     "claim": "Antipoison has a Grand Exchange buy limit of 2,000"
+    },
+    {
+     "chunk_id": "Antipoison__003",
+     "claim": "Making one Antipoison(3) potion from Marrentill potion (unf) and unicorn horn dust results in a profit after GE tax of −625 coins"
+    }
+   ],
+   "input_tokens": 3084,
+   "output_tokens": 423,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Antipoison__000",
+     "claim": "Antipoison has a Grand Exchange buy limit of 2,000",
+     "entailment_prob": 0.9843791127204895,
+     "contradiction_prob": 0.0009873250965029001,
+     "neutral_prob": 0.014633595943450928,
+     "overlap_score": 0.7,
+     "label": "grounded"
+    },
+    {
+     "chunk_id": "Antipoison__003",
+     "claim": "Making one Antipoison(3) potion from Marrentill potion (unf) and unicorn horn dust results in a profit after GE tax of −625 coins",
+     "entailment_prob": 0.024006174877285957,
+     "contradiction_prob": 0.00022809021174907684,
+     "neutral_prob": 0.9757657051086426,
+     "overlap_score": 0.5909090909090909,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q047",
+   "answer": "Hitpoints' \"quest skill choice\" experience total is higher than Attack's. The Hitpoints total is 1,282,300 experience, while the Attack total is 1,267,300 experience — a difference of 15,000 experience in favor of Hitpoints.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Hitpoints__021",
+     "claim": "Hitpoints quest skill choice experience reward total is 1,282,300"
+    },
+    {
+     "chunk_id": "Attack__021",
+     "claim": "Attack quest skill choice experience reward total is 1,267,300"
+    }
+   ],
+   "input_tokens": 4266,
+   "output_tokens": 256,
+   "judge_verdict": "correct",
+   "correctness_label": "correct",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Hitpoints__021",
+     "claim": "Hitpoints quest skill choice experience reward total is 1,282,300",
+     "entailment_prob": 0.9963895678520203,
+     "contradiction_prob": 0.00043864850886166096,
+     "neutral_prob": 0.0031717221718281507,
+     "overlap_score": 0.7272727272727273,
+     "label": "grounded"
+    },
+    {
+     "chunk_id": "Attack__021",
+     "claim": "Attack quest skill choice experience reward total is 1,267,300",
+     "entailment_prob": 0.9969556331634521,
+     "contradiction_prob": 0.00010784029291244224,
+     "neutral_prob": 0.002936548786237836,
+     "overlap_score": 0.8181818181818182,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q048",
+   "answer": "The question requires knowing the Jungle Demon's maximum hit, which is not provided in the retrieved chunks. However, the ancient mace's special attack restores Prayer points equal to 100% of the damage dealt (i.e., equal to the amount of damage inflicted), since it drains the target's Prayer by 100% of the damage dealt and recharges/boosts the user's Prayer by that same amount drained. So without the specific max hit value of the Jungle Demon, the answer would simply equal that damage number, but that figure itself is not found in the retrieved content.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Special_attacks__014",
+     "claim": "The ancient mace's special attack drains the target's Prayer points by 100% of the amount hit and recharges or boosts the user's prayer points by the amount drained."
+    },
+    {
+     "chunk_id": "Prayer__006",
+     "claim": "The ancient mace recharges the player's prayer points by 100% of the damage dealt."
+    }
+   ],
+   "input_tokens": 3887,
+   "output_tokens": 390,
+   "judge_verdict": "incorrect",
+   "correctness_label": "incorrect",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Special_attacks__014",
+     "claim": "The ancient mace's special attack drains the target's Prayer points by 100% of the amount hit and recharges or boosts the user's prayer points by the amount drained.",
+     "entailment_prob": 0.06390488147735596,
+     "contradiction_prob": 0.0006137386662885547,
+     "neutral_prob": 0.9354814291000366,
+     "overlap_score": 0.9523809523809523,
+     "label": "grounded"
+    },
+    {
+     "chunk_id": "Prayer__006",
+     "claim": "The ancient mace recharges the player's prayer points by 100% of the damage dealt.",
+     "entailment_prob": 0.00035687352647073567,
+     "contradiction_prob": 0.0002733991714194417,
+     "neutral_prob": 0.9993696808815002,
+     "overlap_score": 1.0,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q049",
+   "answer": "The retrieved chunks confirm Druidic Ritual gives 250 Herblore experience, but none of the chunks specify the experience gained from making one dose of antipoison. Therefore, the total experience cannot be calculated from the given information.",
+   "answerable": false,
+   "citations": [],
+   "input_tokens": 3384,
+   "output_tokens": 155,
+   "judge_verdict": null,
+   "correctness_label": "incorrectly_abstained",
+   "citation_verdicts": [],
+   "error": null
+  },
+  {
+   "question_id": "q050",
+   "answer": "A raw diamond has a High Alchemy value of 2,115 coins, while a ball of wool has a High Alchemy value of 1 coin. This means the diamond's high-alch value is 2,115 times greater than that of a ball of wool.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Diamond__003",
+     "claim": "Diamond's high alchemy value is 2,115 coins (e.g., for the diamond ring and diamond amulet (u) products made from diamond)."
+    },
+    {
+     "chunk_id": "Ball_of_wool__000",
+     "claim": "Ball of wool's high alchemy value is 1 coin."
+    }
+   ],
+   "input_tokens": 3759,
+   "output_tokens": 274,
+   "judge_verdict": "incorrect",
+   "correctness_label": "incorrect",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Diamond__003",
+     "claim": "Diamond's high alchemy value is 2,115 coins (e.g., for the diamond ring and diamond amulet (u) products made from diamond).",
+     "entailment_prob": 0.323070228099823,
+     "contradiction_prob": 0.023449555039405823,
+     "neutral_prob": 0.6534802317619324,
+     "overlap_score": 0.5,
+     "label": "grounded"
+    },
+    {
+     "chunk_id": "Ball_of_wool__000",
+     "claim": "Ball of wool's high alchemy value is 1 coin.",
+     "entailment_prob": 0.9969543218612671,
+     "contradiction_prob": 0.00047463158261962235,
+     "neutral_prob": 0.002571002347394824,
+     "overlap_score": 0.5,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q051",
+   "answer": "The retrieved wiki excerpts do not contain a complete, consolidated list of all rewards for completing Recipe for Disaster. They only mention partial experience rewards for specific sub-quests/parts of Recipe for Disaster: Freeing Skrach Uglogwee gives 1,500 Ranged experience (with a Ranged requirement of 30), the Dwarf subquest gives 1,000 Slayer experience, and \"The Final Battle\" (the final part of the quest) gives 20,000 experience in a skill of choice above level 50 (with skill requirements including 175, 70, 48, 50, 53, 53, 25, 59, 40, 50, 40, 40, 10, 10, 36). There is no information here about other rewards such as items, quest points, access to areas, or other experience rewards for the full quest.",
+   "answerable": true,
+   "citations": [
+    {
+     "chunk_id": "Ranged__016",
+     "claim": "Freeing Skrach Uglogwee (a Recipe for Disaster subquest) gives 1,500 Ranged experience, requiring Ranged level 30 and other requirements of 41 and 20."
+    },
+    {
+     "chunk_id": "Slayer_training__053",
+     "claim": "The Dwarf subquest of Recipe for Disaster gives 1,000 Slayer experience."
+    },
+    {
+     "chunk_id": "Prayer__035",
+     "claim": "Recipe for Disaster (The Final Battle) gives 20,000 experience in any skill above level 50, with skill requirements of 175, 70, 48, 50, 53, 53, 25, 59, 40, 50, 40, 40, 10, 10, 36."
+    },
+    {
+     "chunk_id": "Attack__020",
+     "claim": "Recipe for Disaster (The Final Battle) gives 20,000 experience in any skill above level 50, with skill requirements of 175, 70, 48, 50, 53, 53, 25, 59, 40, 50, 40, 40, 10, 10, 36."
+    }
+   ],
+   "input_tokens": 4380,
+   "output_tokens": 713,
+   "judge_verdict": null,
+   "correctness_label": "incorrectly_answered",
+   "citation_verdicts": [
+    {
+     "chunk_id": "Ranged__016",
+     "claim": "Freeing Skrach Uglogwee (a Recipe for Disaster subquest) gives 1,500 Ranged experience, requiring Ranged level 30 and other requirements of 41 and 20.",
+     "entailment_prob": 0.9944228529930115,
+     "contradiction_prob": 0.0007832332630641758,
+     "neutral_prob": 0.00479398388415575,
+     "overlap_score": 0.7272727272727273,
+     "label": "grounded"
+    },
+    {
+     "chunk_id": "Slayer_training__053",
+     "claim": "The Dwarf subquest of Recipe for Disaster gives 1,000 Slayer experience.",
+     "entailment_prob": 0.909128725528717,
+     "contradiction_prob": 0.042576033622026443,
+     "neutral_prob": 0.04829524829983711,
+     "overlap_score": 0.9166666666666666,
+     "label": "grounded"
+    },
+    {
+     "chunk_id": "Prayer__035",
+     "claim": "Recipe for Disaster (The Final Battle) gives 20,000 experience in any skill above level 50, with skill requirements of 175, 70, 48, 50, 53, 53, 25, 59, 40, 50, 40, 40, 10, 10, 36.",
+     "entailment_prob": 0.9955663084983826,
+     "contradiction_prob": 0.0005773261655122042,
+     "neutral_prob": 0.0038563439156860113,
+     "overlap_score": 0.8571428571428571,
+     "label": "grounded"
+    },
+    {
+     "chunk_id": "Attack__020",
+     "claim": "Recipe for Disaster (The Final Battle) gives 20,000 experience in any skill above level 50, with skill requirements of 175, 70, 48, 50, 53, 53, 25, 59, 40, 50, 40, 40, 10, 10, 36.",
+     "entailment_prob": 0.9850035905838013,
+     "contradiction_prob": 0.005960769485682249,
+     "neutral_prob": 0.009035620838403702,
+     "overlap_score": 0.8571428571428571,
+     "label": "grounded"
+    }
+   ],
+   "error": null
+  },
+  {
+   "question_id": "q052",
+   "answer": "The retrieved chunks only contain general information about maximum melee hit calculations and mechanics, but do not include any specific information about Vorkath's combat level or the maximum melee hit a player can deal against Vorkath (or his own hit). No chunk mentions Vorkath specifically, so I cannot answer this question from the provided context.",
+   "answerable": false,
+   "citations": [],
+   "input_tokens": 4090,
+   "output_tokens": 184,
+   "judge_verdict": null,
+   "correctness_label": "correct_abstention",
+   "citation_verdicts": [],
+   "error": null
+  },
+  {
+   "question_id": "q053",
+   "answer": "The retrieved chunks do not contain the actual quest walkthrough or steps for Gertrude's Cat. They only mention that completing the quest costs 100 coins (in a list of quest-related gold costs) and reference it in unrelated skill-experience reward tables. None of the chunks describe the quest's objectives, requirements, or step-by-step walkthrough, so I cannot provide the steps to complete it.",
+   "answerable": false,
+   "citations": [],
+   "input_tokens": 4987,
+   "output_tokens": 211,
+   "judge_verdict": null,
+   "correctness_label": "correct_abstention",
+   "citation_verdicts": [],
+   "error": null
+  },
+  {
+   "question_id": "q054",
+   "answer": "The retrieved chunks do not contain information about Woodcutting training methods or their experience rates. They only mention Woodcutting briefly as a skill that can be trained alongside other skills in Temple Trekking (an alternate/low-rate method for other skills), but there is no data on dedicated Woodcutting training methods, tree types, or efficient routes to reach level 99. I cannot determine the most efficient Woodcutting training method from the provided context.",
+   "answerable": false,
+   "citations": [],
+   "input_tokens": 4095,
+   "output_tokens": 222,
+   "judge_verdict": null,
+   "correctness_label": "correct_abstention",
+   "citation_verdicts": [],
+   "error": null
+  },
+  {
+   "question_id": "q055",
+   "answer": "The retrieved chunks do not contain any information about the Tithe Farm minigame or how its Farming XP is calculated. The provided context covers Slayer training (Temple Trekking), Herblore training (Mastering Mixology, Stamina potions, Antidote++), none of which relate to Tithe Farm. Please provide chunks specifically about the Tithe Farm minigame to answer this question.",
+   "answerable": false,
+   "citations": [],
+   "input_tokens": 3845,
+   "output_tokens": 207,
+   "judge_verdict": null,
+   "correctness_label": "correct_abstention",
+   "citation_verdicts": [],
+   "error": null
+  }
+ ]
+}

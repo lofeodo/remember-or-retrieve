@@ -71,5 +71,5 @@ def test_tampered_copy_fails_verification(tmp_path):
 def test_missing_file_reported(tmp_path):
     (tmp_path / "data").mkdir()
     shutil.copy(REPO_ROOT / "data" / "PROVENANCE.json", tmp_path / "data")
-    assert len(verify_data(tmp_path)) == 2
+    assert len(verify_data(tmp_path)) == 3
     assert json.loads((tmp_path / "data" / "PROVENANCE.json").read_text())["files"]

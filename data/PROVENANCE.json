@@ -13,6 +13,12 @@
       "source_path": "data/eval/qa_pairs.json",
       "sha256": "ec89e6987585ef014df4dbdf8686f8c33c1327a63974994f4ec2eb5635552c82",
       "count": 55
+    },
+    "data/eval/rag_reference.json": {
+      "source_path": "results/eval_report.json (slimmed: chunk text dropped)",
+      "source_commit": "6b8d032f405bd6be1058604f1e8259b77c21e2c2",
+      "sha256": "d06ec0b2b507bef856d0bad80078d27ec5f2d8fdcc30e49ca441fda8af3bd87c",
+      "count": 55
     }
   }
 }
