@@ -214,6 +214,7 @@ def train_dpo(
     }
     if rank == 0:
         tok.tok.save_pretrained(out_dir / "adapter")
+        model_lib.write_chain(out_dir / "adapter", init_from)
         profile = profiling.build_profile(
             "dpo",
             all_stats,

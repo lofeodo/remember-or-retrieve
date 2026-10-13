@@ -37,16 +37,40 @@ def load_pretrained(model_cfg: dict, source: str | None = None):
     )
 
 
+CHAIN_FILE = "base.json"
+
+
+def write_chain(adapter_dir, init_from: str | None) -> None:
+    """Record which checkpoint an adapter was trained on top of (rank 0 only).
+
+    An adapter trained on a merged SFT (or SFT+DPO) model is meaningless on the plain pretrained
+    base; this file lets `load_trained` rebuild the whole stack. `None` means the pretrained base.
+    """
+    import json
+    from pathlib import Path
+
+    (Path(adapter_dir) / CHAIN_FILE).write_text(
+        json.dumps({"init_from": str(init_from) if init_from else None}), encoding="utf-8"
+    )
+
+
 def load_trained(model_cfg: dict, path: str, smoke_cfg: dict | None = None, seed: int = 0):
     """A trained checkpoint as one plain model: a full-SFT model dir as is, or a LoRA adapter dir
-    merged into its base. With `smoke_cfg`, the base is the seeded tiny smoke model."""
+    merged into its base. The base is the checkpoint named in the adapter's `base.json` (resolved
+    recursively, so SFT -> DPO -> GRPO loads as the full stack), else the pretrained model. With
+    `smoke_cfg`, the pretrained base is the seeded tiny smoke model."""
+    import json
     from pathlib import Path
 
     if not (Path(path) / "adapter_config.json").exists():
         return load_pretrained(model_cfg, path)
     from peft import PeftModel
 
-    if smoke_cfg is not None:
+    chain = Path(path) / CHAIN_FILE
+    parent = json.loads(chain.read_text(encoding="utf-8"))["init_from"] if chain.exists() else None
+    if parent is not None:
+        base = load_trained(model_cfg, parent, smoke_cfg, seed)
+    elif smoke_cfg is not None:
         from transformers import AutoTokenizer
 
         base = tiny_model(smoke_cfg, len(AutoTokenizer.from_pretrained(path)), seed)
