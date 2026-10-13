@@ -1,0 +1,105 @@
+{
+ "cheap_model": "claude-haiku-5-5",
+ "corpus_sha256": "2b245aeda9db32b2c0c7b29d899b86ac5004c9cc79cbcb5eefbd5547918d71af",
+ "created": "2026-10-13",
+ "drops": {
+  "assemble": {
+   "dedup": 422,
+   "leakage:golden": 120,
+   "multi_hop:solver_disagrees": 27,
+   "unanswerable:actually_answerable": 280
+  },
+  "dpo": {
+   "fabricated_abstention:abstains": 1,
+   "hallucinated:still_correct": 93,
+   "verbose:not_verbose_or_lost_facts": 19
+  },
+  "local_gates": {
+   "multi_hop:answer_length": 56,
+   "multi_hop:evidence_not_verbatim": 65,
+   "multi_hop:facts_not_in_answer": 12,
+   "multi_hop:no_reference_facts": 7,
+   "multi_hop:not_feasible": 119,
+   "multi_hop:operands_not_in_evidence": 254,
+   "multi_hop:question_length": 20,
+   "multi_hop:refers_to_excerpt": 43,
+   "single_hop:answer_length": 2,
+   "single_hop:evidence_not_verbatim": 222,
+   "single_hop:facts_not_in_answer": 103,
+   "single_hop:no_reference_facts": 2,
+   "single_hop:number_not_in_evidence": 147,
+   "single_hop:refers_to_excerpt": 107,
+   "unanswerable:question_shape": 1
+  }
+ },
+ "files": {
+  "dpo.jsonl": {
+   "by_kind": {
+    "fabricated_abstention": 300,
+    "hallucinated": 700,
+    "verbose": 500
+   },
+   "rows": 1500,
+   "sha256": "0eb0b97e2f3dab4cbe38afe109cba9550027ecafea78488560e36efcf7865c01"
+  },
+  "grpo_prompts.jsonl": {
+   "by_kind": {
+    "multi_hop": 62,
+    "single_hop": 275,
+    "unanswerable": 67
+   },
+   "rows": 404,
+   "sha256": "e9835009a3a947677d75f7559eaab1046d6fe7aea85aef4814cd1ebe7a60c63c"
+  },
+  "sft_train.jsonl": {
+   "by_kind": {
+    "multi_hop": 402,
+    "single_hop": 3792,
+    "unanswerable": 647
+   },
+   "rows": 4841,
+   "sha256": "eec53761c6e747ee3594bbf46645ccfbaae021bb14a26d3191285867f4251651"
+  },
+  "sft_val.jsonl": {
+   "by_kind": {
+    "multi_hop": 20,
+    "single_hop": 208,
+    "unanswerable": 27
+   },
+   "rows": 255,
+   "sha256": "1c463c3f316e66db8b9528ed3a44857987d3cc266495990134b83559cd762843"
+  }
+ },
+ "generator_model": "claude-sonnet-5-5",
+ "golden_sha256": "ec89e6987585ef014df4dbdf8686f8c33c1327a63974994f4ec2eb5635552c82",
+ "leakage": {
+  "cosine": 0.85,
+  "dedup_cosine": 0.95,
+  "dedup_jaccard": 0.7,
+  "embedding_model": "BAAI/bge-large-en-v1.5",
+  "jaccard": 0.5
+ },
+ "shortfalls": {
+  "grpo:multi_hop": "62 < target 120",
+  "grpo:single_hop": "275 < target 450",
+  "grpo:unanswerable": "67 < target 150",
+  "sft:multi_hop": "422 < target 1000",
+  "sft:unanswerable": "674 < target 900"
+ },
+ "spend_total_usd": 4.9811,
+ "spend_usd": {
+  "dpo": 0.1597,
+  "gen": 4.2936,
+  "pilot": 0.041,
+  "pilot_mh-sft": 0.241,
+  "verify": 0.2458
+ },
+ "template_hashes": {
+  "generator_system": "bc225b7e50b62bae",
+  "rejected_instructions": "d0446acd5a8987a1",
+  "rejected_system": "654153a37b1eea58",
+  "schemas": "b513179e0cad9b21",
+  "sft_system": "bb46f85c63d49567",
+  "solver_system": "b3cbc7ecd6a35715"
+ }
+}
