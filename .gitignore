@@ -35,3 +35,6 @@ mlruns/
 
 # Terraform lock files are committed; local plan output is not
 *.tfplan
+
+# Untracked batch ids, raw API responses, candidate rows (step 3)
+data/raw/
