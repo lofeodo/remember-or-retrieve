@@ -84,8 +84,7 @@ def rollout_table(profiles: list[dict]) -> str:
         return ""
     lines = ["| " + " | ".join(r) + " |" for r in rows]
     lines.insert(1, "|" + "|".join("---" for _ in ROLLOUT_HEADER) + "|")
-    return "
-".join(lines)
+    return "\n".join(lines)
 
 
 def main() -> int:
@@ -95,10 +94,7 @@ def main() -> int:
     profiles = [load(p) for p in args.stages]
     print(table(profiles))
     if rollouts := rollout_table(profiles):
-        print("
-Rollouts (RL stages)
-
-" + rollouts)
+        print("\nRollouts (RL stages)\n\n" + rollouts)
     return 0
 
 
