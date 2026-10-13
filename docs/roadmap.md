@@ -22,7 +22,7 @@ long prose:
 - [x] **Step 2 — Compute plan, GCP bootstrap, GPU quota** (`feat/compute-plan`, free)
 - [x] **Step 3 — Training data generation** (`feat/training-data`, $4.98 Claude API)
 - [x] **Step 4 — Scoring harness and reward functions** (`feat/scoring-harness`, $0.29 judge calls)
-- [ ] **Step 5 — Distributed training pipeline: SFT, LoRA vs full, DPO** (`feat/training-pipeline`, free)
+- [x] **Step 5 — Distributed training pipeline: SFT, LoRA vs full, DPO** (`feat/training-pipeline`, free)
 - [ ] **Step 6 — GRPO stage** (`feat/grpo`, free)
 - [ ] **Step 7 — JAX training stage** (`feat/jax-stage`, free)
 - [ ] **Step 8 — Training infrastructure and model registry** (`feat/training-infra`, under $1)
@@ -763,3 +763,211 @@ there is no teardown to confirm.
   not a grader. Final checkpoint scores come from the judge.
 - Candidate answers are untrusted text in the judge prompt, kept verbatim for comparability; the forced
   enum output limits what an injection can do.
+
+### Step 5 — Distributed training pipeline: SFT, LoRA vs full, DPO (`feat/training-pipeline`, free)
+
+Plan approved 2026-10-13. Status: complete (see outcome and deviations).
+
+#### Context
+
+Steps 3 and 4 produced the frozen training data (`data/training/`: 4,841 + 255 SFT rows, 1,500 DPO pairs,
+404 GRPO prompts) and the scorer. Nothing trains yet. This step writes, and proves correct, all the training
+code for the PyTorch stages that run in the one paid GCP window (step 9): SFT, the LoRA-vs-full comparison,
+and DPO, orchestrated by Ray Train over DDP and FSDP2, with per-stage profiling and the distribution checks
+that CLAUDE.md requires ("ranks started, every GPU busy, one coherent loss curve").
+
+Code only. No GPU rental, no GCP, no API spend, no real checkpoint (that is step 9). GRPO is step 6, JAX is
+step 7, Terraform and the registry are step 8. **Cost: $0. Running total stays $5.27 of the $20 target and
+$50 cap.** Nothing billable is created, so there is no teardown to confirm.
+
+#### What exploration found (shapes the design)
+
+- Compute plan is fixed: `Qwen/Qwen3-8B`, `a2-highgpu-4g` (4x A100 40GB, spot), **full fine-tune = FSDP
+  full-shard (~25 GB/GPU for states, then activations), LoRA / DPO / GRPO = DDP**, all under Ray Train.
+  `config.yaml` `compute:` already carries this.
+- Data schemas (step 3): SFT rows hold `messages[system,user,assistant]`; DPO rows hold `prompt_messages`,
+  `chosen`, `rejected`, `rejected_kind`. Chat template is applied at training time with thinking disabled.
+  Abstention is the fixed phrase in `datagen/prompts.ABSTAIN_PHRASE`. Rows are short (~10-word answers plus a
+  ~60-token system prompt), so one SFT epoch is only ~0.5M tokens. Memorization is the goal, so several epochs;
+  epoch count is config, final value chosen in step 9 from the rehearsal numbers.
+- Dev machine: Windows 11, Python 3.11 venv, **CPU-only torch 2.14.1 and transformers 5.19, no Ray, no peft,
+  no TRL**, RTX 3060 12 GB unused, Docker installed (WSL2 backend). Ray multi-worker on native Windows is
+  experimental, so the smoke test runs on Linux (Docker locally, ubuntu in CI).
+- Reusable: `config.load_config/resolve_path`, `data.load_golden_set`, `scoring.schema.read_answers/write`
+  (answers file format step 9 scores), `datagen.prompts.SFT_SYSTEM_PROMPT/ABSTAIN_PHRASE`, `scripts/*` CLI style
+  (argparse subcommands), `slow` pytest marker, fakes-not-mocks test convention.
+
+#### Decisions (confirmed with the user)
+
+1. **Hybrid loops.** Own PyTorch loop for SFT / LoRA / full (explicit DDP and FSDP2 wrapping, visible gradient
+   all-reduce, built-in profiling and rank checks). **TRL `DPOTrainer`** for DPO, run under Ray Train. If TRL's
+   Ray/Accelerate integration misbehaves with the pinned versions, the fallback is a ~40-line own DPO loss in
+   the same loop; any switch is recorded here as a deviation.
+2. **Smoke test on Linux**, not native Windows: 2 Ray CPU workers, gloo backend, tiny randomly initialised
+   Qwen3-shaped model, run in a local Docker container and in a new CI job.
+
+#### Design
+
+New package `src/remember_or_retrieve/training/`:
+
+- `data.py` — loads SFT/DPO JSONL; applies the Qwen3 chat template with `enable_thinking=False`; builds
+  **assistant-only loss labels** (prompt tokens masked to -100, `<|im_end|>` kept as a target so the model
+  learns to stop); length-bucketed dynamic padding; `DistributedSampler` sharding with a per-epoch seed.
+  Tokenizer injectable so unit tests use a fake one.
+- `model.py` — loads the model in bf16 with SDPA attention, `trust_remote_code=False`, safetensors only,
+  pinned HF revision. `build_lora(model, cfg)` via peft (all linear projections, r/alpha from config).
+  `tiny_model(cfg)` builds the smoke-test model from a small `Qwen3Config` (random init, real tokenizer).
+- `parallel.py` — `wrap_ddp(model)` and `wrap_fsdp2(model)` (`torch.distributed.fsdp.fully_shard` per decoder
+  layer, bf16 params, fp32 gradient reduction, optional activation checkpointing and CPU offload flag).
+  Checkpointing: LoRA saves adapters only; full saves a gathered bf16 state dict on rank 0 (safetensors), with
+  a sharded DCP save path for resume. Resume from the latest Ray checkpoint so a spot preemption costs minutes,
+  not the stage.
+- `sft.py` — the training loop for `--mode full|lora`: cosine schedule with warmup, gradient accumulation
+  (`no_sync` under DDP), grad clipping, bf16 autocast on GPU, periodic val loss, global-mean loss via
+  all-reduce.
+- `dpo.py` — TRL `DPOTrainer` on the SFT checkpoint with LoRA; reference = adapter-disabled policy (no second
+  model copy, which matters at 40 GB). Converts `dpo.jsonl` to TRL's conversational prompt/chosen/rejected.
+  Takes `--init-from <checkpoint>` since which SFT variant wins is decided in step 9.
+- `profiling.py` — one `StageProfile` schema for every stage, written as `profile.json` next to the
+  checkpoint: tokens/sec (global and per device, non-pad tokens), step-time p50/p95 (CUDA events), **peak
+  memory per device** (`max_memory_allocated`, reset per stage), trainable vs total params, estimated MFU
+  against the A100 bf16 peak, wall-clock including model load, and an optional short `torch.profiler` window
+  (compute vs NCCL time) saved as a trace. Per-rank values gathered with `all_gather_object`. Step 6 adds
+  rollout throughput to the same schema.
+- `checks.py` — **the distribution checks**, each an assertion that fails loudly (same discipline as step 4's
+  NLI label-order check):
+  1. *Ranks started:* every rank reports `{rank, world_size, host, pid, device}`; world size equals the
+     requested workers, pids and devices unique per host.
+  2. *Gradients really sync:* after one backward, the max-min of each rank's gradient checksum is 0 (DDP);
+     under FSDP2, parameters are sharded `DTensor`s and each rank holds ~1/world of the total numel.
+  3. *Weights stay identical across ranks* (DDP) after N optimizer steps.
+  4. *Every GPU busy:* on GPU, a `pynvml` sampler per rank records utilization over the run; passes only if
+     every device's median utilization exceeds a threshold (skipped on CPU, covered in step 9's real run).
+  5. *One coherent loss curve:* per-rank losses within tolerance of the all-reduced mean at every step.
+  6. *Equivalence to single-process:* a 2-rank run with the same global batch and seed matches the 1-rank
+     loss curve within tolerance (DDP and FSDP2). This is the strongest proof the run is one training job,
+     and the same code path doubles as the single-GPU reference run (`--num-workers 1`) for throughput.
+- `launch.py` — Ray Train `TorchTrainer` (`ScalingConfig(num_workers, use_gpu)`, `RunConfig(storage_path,
+  FailureConfig(max_failures))`), NCCL backend on GPU and gloo on CPU, dashboard off. `train_loop_per_worker`
+  dispatches on stage. Storage path is a config value so step 8 can point it at the GCS bucket.
+- `generate.py` — greedy answer generation for the 55 golden questions with the same system prompt, merging
+  LoRA adapters if needed, writing the **scoring answers format** (`scoring.schema`) so step 9 only has to run
+  `scripts/score.py score`. Small, but it makes each stage's output scoreable the moment it exists.
+- `scripts/train.py` (`sft | dpo | check | generate`, flags `--mode full|lora`, `--strategy ddp|fsdp`,
+  `--num-workers`, `--smoke`) and `scripts/compare_stages.py` (reads `profile.json` files into the
+  LoRA-vs-full table: trainable params, tokens/sec/GPU, peak GB, wall-clock; golden score filled in step 9).
+- Config: new `training:` section in `config/config.yaml` (lr, batch sizes, epochs, max length, warmup, LoRA
+  r/alpha/targets, DPO beta, per-stage strategy, profiling toggles, smoke model shape, checkpoint dir, the
+  HF revision pin, check tolerances). Paths relative to repo root as elsewhere.
+- Dependencies: new `train` extra, exact pins verified against PyPI at implementation time: `torch`,
+  `transformers`, `peft`, `trl`, `accelerate`, `ray[train]`, `pynvml`, `safetensors`. The pins are chosen
+  together so Qwen3, FSDP2, TRL and Ray Train agree; the dev extra and the main CI job are unchanged.
+
+#### Tests
+
+- **Fast, run in the existing CI job (no torch needed, fakes):** label masking, chat-template/format
+  round trip with a fake tokenizer, sampler sharding (no overlap, full coverage), bucketing, schedule, profile
+  schema, check logic given synthetic per-rank reports (a deliberately desynced report must fail), DPO row
+  conversion over the committed file, every SFT row tokenizes within max length.
+- **Smoke, new CI job `smoke-distributed` (ubuntu, CPU torch, `pip install -e ".[train]"`) and the same
+  command in a local Docker container:** 2-worker Ray + gloo run of SFT full (FSDP2), SFT LoRA (DDP) and DPO
+  for a few steps on the tiny model against real data slices; all six distribution checks pass; the 2-rank
+  vs 1-rank equivalence holds; checkpoint save, kill-and-resume continues the same loss curve; `generate`
+  writes a valid answers file that `scoring` loads. Marked `slow` locally; the CI job runs `-m slow` for
+  this file only.
+- `ruff check` and `ruff format --check` stay green.
+
+#### Security
+
+No credentials involved, no endpoint, no IAM, no GCP contact. Supply chain: exact pins; model and tokenizer
+loaded with `trust_remote_code=False` from a **pinned HF revision**, safetensors only, `torch.load` only with
+`weights_only=True`, no unpickling of downloaded files. Ray dashboard disabled and bound to localhost so no
+open port. The new CI job gets `contents: read` only and no secrets. The Qwen3 download is public and needs
+no token (Gemma's gated token belongs to step 7).
+
+#### Branch and workflow
+
+On approval: copy this plan into `docs/roadmap.md` under Step 5 and mark it in progress; branch
+`feat/training-pipeline`. Small commits in order: config + `train` extra; data/collation/masking; model +
+tiny model; profiling; parallel wrappers; SFT loop; distribution checks; Ray launch; DPO; generate + CLI;
+smoke tests + CI job; roadmap outcome. Deviations (TRL fallback, pinned versions that had to change, a check
+that needed a looser tolerance) go into the roadmap entry. Nothing is committed to `main` directly.
+
+#### Verification
+
+1. `pytest`, `ruff check`, `ruff format --check` green locally and in CI, plus the new smoke job green.
+2. Local Docker run of the smoke suite: all six distribution checks pass; 2-rank loss curve matches 1-rank
+   for DDP and FSDP2; resume works.
+3. A deliberately broken run (one rank not syncing, or a world size mismatch) makes the checks fail, shown once.
+4. `profile.json` for each smoke stage has tokens/sec, step times and peak memory per rank (CPU memory proxy
+   locally; real GPU numbers come in step 9).
+5. `scripts/compare_stages.py` renders the LoRA-vs-full table from the smoke profiles.
+6. Roadmap entry records the plan, deviations, and "Spend: $0, nothing billable, no teardown".
+
+#### Not in this step / known limits
+
+- Real throughput, memory and the GPU-utilization check can only be proven on the A100s in step 9; this step
+  proves correctness and that the measurement code runs. The 8B memory plan (FSDP ~25 GB/GPU plus activations,
+  with the 8-bit-optimizer and partial-unfreeze fallbacks in `compute-plan.md`) is validated there, not here.
+- FSDP2 (not FSDP1) is used; if the pinned torch's FSDP2 + Ray Train combination fails in the smoke test, FSDP1
+  is the recorded fallback.
+- Optional follow-up if wanted: a real-tokenizer single-GPU LoRA run on the local RTX 3060 (needs CUDA torch);
+  deliberately left out as it adds install cost for little proof beyond the tiny-model path.
+
+#### Outcome and deviations from the plan (recorded 2026-10-13)
+
+**Result.** `src/remember_or_retrieve/training/` (data, model, parallel, sft, dpo, profiling, checks,
+launch, generate, smoke), `scripts/train.py` (`sft | dpo | check | generate`),
+`scripts/compare_stages.py`, `docker/smoke.Dockerfile`, a `training:` config section, a `train` extra,
+and a `smoke-distributed` CI job. 100 tests pass in the dev-only job; the 10 distributed smoke tests
+(2-worker Ray and multiprocessing runs on a tiny Qwen3-shaped model, CPU, gloo) pass in Docker and in
+a clean-container replay of both CI jobs. Not yet run on GitHub Actions itself.
+
+**Verification against the plan.**
+
+| Check | Result |
+|---|---|
+| Ranks started, gradients synced, weights identical (DDP), parameters sharded (FSDP2), one coherent loss | pass in every SFT and DPO smoke run |
+| 2-rank vs 1-rank loss curve (full/FSDP2, full/DDP, LoRA/DDP) | agree; worst relative difference 1e-7 (full), within 5e-3 (LoRA, dropout RNG differs by split) |
+| Resume after simulated preemption (FSDP2, stop at step 3) | continues the uninterrupted curve |
+| Deliberately unsynced run | caught by the gradient-checksum check (test) |
+| DPO on top of an SFT adapter; Ray Train path; `generate` output loads in `scoring` | pass |
+| GPU-busy check | skipped on CPU by design; measured in the paid run |
+
+Smoke profile table (CPU, 2 workers, 10M-parameter model; shows the code runs, not real numbers):
+sft_full FSDP 402 tok/s/device, sft_lora DDP 542, dpo 375; LoRA trains 131k of 9.9M parameters.
+
+**Deviations from the approved plan.**
+
+- **DPO is an own loop, not TRL.** TRL 1.15 routes `DPOTrainer` through a fused LM-head kernel that
+  needs Triton, so it cannot run on CPU and the stage would have reached the paid window untested.
+  This is the fallback the plan named. `trl` and `accelerate` are not dependencies. Reference policy is
+  the adapter-disabled model, as planned.
+- **Max lengths set from the data.** The real tokenizer showed SFT rows up to 293 tokens (p99 210) and
+  DPO pairs up to 442, so `max_length` is 320 (SFT) and 512 (DPO), not 256 and 320. A test fails on any
+  row that does not fit. One SFT epoch is about 628k tokens.
+- **Loss-coherence check redefined.** Each rank sees different examples, so its own-slice loss cannot
+  match the mean to 1e-3. The check is: every rank observes the identical all-reduced loss (1e-6), and
+  each local loss stays within a 0.75 band of it.
+- **Batch size is global.** Config uses `global_batch_size` (64) with derived accumulation, and the loss
+  is normalised by the global token count, so 1 and N ranks are the same training job.
+- **FSDP2 master weights are fp32** (about 16 bytes/parameter, roughly 33 GB per GPU on 4x40 GB), not the
+  12 bytes the compute plan assumed, to avoid bf16 update loss. This is tight on A100 40GB. Step 9 must
+  check memory first and fall back to the compute plan's options (8-bit optimizer, partial unfreeze,
+  80GB machine) if needed. Not testable before the paid window.
+- **Resume state lives in the output directory** (`resume/`), not in Ray's checkpoint store. Step 8 must
+  make it durable (bucket sync) or a spot preemption loses it with the VM.
+- **Ray dashboard is off**, which makes Ray log harmless "State API unavailable" messages. Ray 2.59
+  enables token auth by default.
+- Rank 0 loads the model on every rank (about 4 x 32 GB host RAM for the fp32 full run; the machine has
+  340 GB). Meta-device loading is a possible optimisation, not needed.
+
+**Caveats.**
+
+- Real tokens/sec, peak GPU memory, MFU, communication share and GPU utilisation are only measured in
+  step 9. The measurement code runs and is tested, but its GPU branches (NVML sampling, CUDA memory,
+  NCCL) are untested here.
+- The torch profiler trace is written per rank next to the checkpoint.
+
+**Spend.** $0. Nothing billable was created, so there is no teardown to confirm. Running total stays
+$5.27 of the $20 target and $50 cap.

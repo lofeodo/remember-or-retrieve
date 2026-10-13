@@ -25,6 +25,15 @@ eval = [
     "numpy",
     "sentence-transformers",
 ]
+train = [
+    "numpy",
+    "peft==0.21.2",
+    "pynvml==13.0.1",
+    "ray[train]==2.59.0",
+    "safetensors==0.8.0",
+    "torch==2.14.1",
+    "transformers==5.19.0",
+]
 
 [build-system]
 requires = ["setuptools>=68"]
