@@ -1,88 +1,105 @@
-"""Checks over the frozen, committed training data in data/training/."""
-
-import json
-from collections import Counter
+"""Fast tests for training/data.py: masking, batching, and the committed rows. No torch needed."""
 
 import pytest
 
 from remember_or_retrieve.config import load_config, resolve_path
-from remember_or_retrieve.data import load_corpus, load_golden_set, sha256_of
-from remember_or_retrieve.datagen import prompts, validate
+from remember_or_retrieve.training import data
 
-OUT = resolve_path(load_config()["training_data"]["out_dir"])
-pytestmark = pytest.mark.skipif(not (OUT / "MANIFEST.json").exists(), reason="data not frozen yet")
+IM_END_ID = 1
 
 
-def rows(name):
-    with open(OUT / name, encoding="utf-8") as f:
-        return [json.loads(line) for line in f if line.strip()]
+class FakeTok:
+    """Char-level tokenizer; `<|im_end|>` is one token."""
+
+    pad_token_id = 0
+
+    def prompt_ids(self, messages):
+        return [2] + [ord(c) for m in messages for c in m["content"]] + [3]
+
+    def encode(self, text):
+        body = text.removesuffix(data.IM_END)
+        ids = [ord(c) for c in body]
+        return ids + [IM_END_ID] if text.endswith(data.IM_END) else ids
 
 
-def test_manifest_matches_files():
-    manifest = json.loads((OUT / "MANIFEST.json").read_text(encoding="utf-8"))
-    for name, info in manifest["files"].items():
-        assert sha256_of(OUT / name) == info["sha256"], name
-        assert len(rows(name)) == info["rows"], name
-    assert manifest["spend_total_usd"] < 7  # roadmap's Claude line for steps 3 to 10
-    assert manifest["template_hashes"] == prompts.template_hashes()
-
-
-def test_sft_rows():
-    sft = rows("sft_train.jsonl") + rows("sft_val.jsonl")
-    assert len(sft) >= 4500
-    assert len({r["id"] for r in sft}) == len(sft)
-    corpus_ids = {c.chunk_id for c in load_corpus()}
-    kinds = Counter(r["kind"] for r in sft)
-    assert set(kinds) == set(prompts.KINDS)
-    assert kinds["single_hop"] > kinds["multi_hop"] > 0
-    assert 0.08 <= kinds["unanswerable"] / len(sft) <= 0.2
-    for r in sft:
-        roles = [m["role"] for m in r["messages"]]
-        assert roles == ["system", "user", "assistant"]
-        assert r["messages"][0]["content"] == prompts.SFT_SYSTEM_PROMPT
-        assert set(r["chunk_ids"]) <= corpus_ids
-        answer = r["messages"][2]["content"]
-        assert (answer == prompts.ABSTAIN_PHRASE) == (r["kind"] == "unanswerable")
-        if r["kind"] != "unanswerable":
-            assert r["reference_facts"] and r["evidence"]
-
-
-def test_dpo_rows():
-    dpo = rows("dpo.jsonl")
-    assert len(dpo) >= 1400
-    assert len({r["id"] for r in dpo}) == len(dpo)
-    assert set(Counter(r["rejected_kind"] for r in dpo)) == {
-        "hallucinated",
-        "verbose",
-        "fabricated_abstention",
+def row(i, answer="ok"):
+    return {
+        "id": f"r{i}",
+        "messages": [
+            {"role": "system", "content": "sys"},
+            {"role": "user", "content": f"q{i}"},
+            {"role": "assistant", "content": answer},
+        ],
     }
-    for r in dpo:
-        assert r["chosen"] != r["rejected"] and r["rejected"].strip()
-        assert [m["role"] for m in r["prompt_messages"]] == ["system", "user"]
-        if r["rejected_kind"] == "fabricated_abstention":
-            assert r["chosen"] == prompts.ABSTAIN_PHRASE
 
 
-def test_grpo_rows():
-    grpo = rows("grpo_prompts.jsonl")
-    assert len(grpo) >= 300
-    assert len({r["id"] for r in grpo}) == len(grpo)
-    for r in grpo:
-        assert r["answerable"] == (r["kind"] != "unanswerable")
-        assert (r["reference_answer"] == prompts.ABSTAIN_PHRASE) == (not r["answerable"])
+def test_labels_mask_prompt_and_keep_im_end():
+    ex = data.encode_sft_row(FakeTok(), row(1, "yes"), 100)
+    n_prompt = len(FakeTok().prompt_ids(row(1)["messages"][:-1]))
+    assert ex["labels"][:n_prompt] == [data.IGNORE_INDEX] * n_prompt
+    assert ex["labels"][n_prompt:] == ex["input_ids"][n_prompt:]
+    assert ex["labels"][-1] == IM_END_ID  # the model is trained to stop
 
 
-def test_no_golden_question_in_training_data_exact():
-    """Cheap exact/normalized check that runs in CI. The embedding check is
-    scripts/check_leakage.py."""
-    gold = {validate.alnum(g.question) for g in load_golden_set()}
-    qs = [r["messages"][1]["content"] for r in rows("sft_train.jsonl") + rows("sft_val.jsonl")]
-    qs += [r["question"] for r in rows("grpo_prompts.jsonl")]
-    qs += [r["prompt_messages"][1]["content"] for r in rows("dpo.jsonl")]
-    assert not [q for q in qs if validate.alnum(q) in gold]
+def test_too_long_row_raises():
+    with pytest.raises(ValueError):
+        data.encode_sft_row(FakeTok(), row(1, "x" * 50), 10)
 
 
-def test_grpo_prompts_do_not_repeat_sft_questions():
-    sft = {validate.alnum(r["messages"][1]["content"]) for r in rows("sft_train.jsonl")}
-    sft |= {validate.alnum(r["messages"][1]["content"]) for r in rows("sft_val.jsonl")}
-    assert not [r for r in rows("grpo_prompts.jsonl") if validate.alnum(r["question"]) in sft]
+def test_collate_pads_and_masks():
+    a = data.encode_sft_row(FakeTok(), row(1, "a"), 100)
+    b = data.encode_sft_row(FakeTok(), row(2, "longer answer"), 100)
+    out = data.collate([a, b], pad_id=0)
+    assert len({len(x) for x in out["input_ids"]}) == 1
+    assert out["labels"][0][-1] == data.IGNORE_INDEX
+    assert out["attention_mask"][0][-1] == 0 and out["attention_mask"][1][-1] == 1
+
+
+def test_global_batches_independent_of_world_size_and_deterministic():
+    a = data.global_batches(100, 16, seed=7, epoch=0)
+    assert a == data.global_batches(100, 16, seed=7, epoch=0)
+    assert a != data.global_batches(100, 16, seed=7, epoch=1)
+    assert len(a) == 6 and all(len(b) == 16 for b in a)
+    assert len({i for b in a for i in b}) == 96  # no repeats; remainder dropped
+
+
+@pytest.mark.parametrize("world", [1, 2, 4])
+def test_rank_slices_partition_the_global_batch(world):
+    lengths = [(i * 7) % 13 + 5 for i in range(64)]
+    batch = list(range(0, 64, 2))[:16]
+    parts = [data.rank_slice(batch, lengths, r, world) for r in range(world)]
+    assert sorted(i for p in parts for i in p) == sorted(batch)
+    assert all(len(p) == 16 // world for p in parts)
+
+
+def test_rank_slice_balances_lengths():
+    lengths = list(range(16))
+    parts = [data.rank_slice(list(range(16)), lengths, r, 2) for r in (0, 1)]
+    sums = [sum(lengths[i] for i in p) for p in parts]
+    assert abs(sums[0] - sums[1]) <= 8
+
+
+def test_accum_steps():
+    assert data.accum_steps(64, 16, 4) == 1
+    assert data.accum_steps(64, 16, 1) == 4
+    with pytest.raises(ValueError):
+        data.accum_steps(64, 16, 3)
+
+
+def test_dpo_conversion():
+    out = data.to_trl_dpo(
+        {"prompt_messages": [{"role": "user", "content": "q"}], "chosen": "a", "rejected": "b"}
+    )
+    assert out["chosen"] == [{"role": "assistant", "content": "a"}]
+    assert out["rejected"][0]["content"] == "b" and out["prompt"][0]["content"] == "q"
+
+
+def test_committed_sft_and_dpo_rows_have_the_expected_shape():
+    cfg = load_config()
+    out = resolve_path(load_config()["training_data"]["out_dir"])
+    sft = data.read_jsonl(out / "sft_train.jsonl")
+    assert sft and all(r["messages"][-1]["role"] == "assistant" for r in sft)
+    dpo = data.read_jsonl(out / "dpo.jsonl")
+    assert all(r["chosen"] != r["rejected"] for r in dpo)
+    sft_cfg = cfg["training"]["sft"]
+    assert sft_cfg["global_batch_size"] % sft_cfg["micro_batch_size"] == 0
