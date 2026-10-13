@@ -38,3 +38,6 @@ mlruns/
 
 # Untracked batch ids, raw API responses, candidate rows (step 3)
 data/raw/
+.scratch/
+.hf-cache/
+data/checkpoints/

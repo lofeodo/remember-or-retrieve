@@ -113,6 +113,7 @@ training:
     micro_batch_size: 16 # per device; grad accumulation is derived
     seed: 1729
     eval_every: 50
+    checkpoint_every: 100 # resume checkpoint (steps); a spot preemption loses at most this many
     gradient_checkpointing: true
   lora:
     r: 64
@@ -137,7 +138,8 @@ training:
     gpu_util_sample_s: 1.0
     min_median_gpu_util: 30 # percent, every device (GPU runs only)
   checks:
-    loss_rel_tol: 1.0e-3 # per-rank loss vs all-reduced mean
+    global_loss_rel_tol: 1.0e-6 # every rank must observe the same all-reduced loss
+    local_loss_band: 0.75 # a rank's own-slice loss stays within this fraction of the global loss
     equivalence_rel_tol: 5.0e-3 # 2-rank vs 1-rank loss curve
     max_failures: 2 # Ray restarts after a spot preemption
   smoke:
