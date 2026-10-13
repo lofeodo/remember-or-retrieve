@@ -82,14 +82,14 @@ KEY_ENV_VARS = ("ANTHROPIC_API_KEY", "ANTHROPIC_1ST_API_KEY")
 
 
 def make_client():
-    import anthropic
-
     key = next((os.environ[v] for v in KEY_ENV_VARS if os.environ.get(v)), None)
     if key is None:
         raise RuntimeError(
             "No API key: set ANTHROPIC_API_KEY or ANTHROPIC_1ST_API_KEY in the environment "
             "(never commit it)"
         )
+    import anthropic
+
     return anthropic.Anthropic(api_key=key)
 
 
