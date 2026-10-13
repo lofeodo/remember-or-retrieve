@@ -80,3 +80,16 @@ scoring:
     judge_accuracy_tolerance: 0.055 # re-judged accuracy vs published 0.836 (3 questions)
     judge_min_agreement: 0.90
     nli_prob_tolerance: 0.001
+  reward:
+    # Fast local GRPO reward (no network, no GPU). Range is [-1, 1].
+    # Length budget in words: max(min_words, per_ref_word * words in the reference answer).
+    # SFT answers run p50 10 / p99 28 words (single-hop) and p99 42 (multi-hop).
+    abstain_on_answerable: 0.5 # penalty for declining a question the corpus answers
+    answered_unanswerable: 0.5 # penalty for answering a question that should be declined
+    unsupported_number: 0.25 # per number in neither the reference, the question, nor the chunks
+    unsupported_number_cap: 0.5
+    stray_number: 0.05 # per number found in the chunks but not in the reference (spray guard)
+    stray_number_cap: 0.2
+    verbosity: 0.3 # maximum penalty, reached at twice the length budget
+    min_words: 30
+    per_ref_word: 2.0
