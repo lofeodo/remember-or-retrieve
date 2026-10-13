@@ -20,7 +20,7 @@ long prose:
 
 - [x] **Step 1 — Repo scaffold** (`feat/scaffold`, free)
 - [x] **Step 2 — Compute plan, GCP bootstrap, GPU quota** (`feat/compute-plan`, free)
-- [ ] **Step 3 — Training data generation** (`feat/training-data`, ~$2 to $4 Claude API)
+- [x] **Step 3 — Training data generation** (`feat/training-data`, $4.98 Claude API)
 - [ ] **Step 4 — Scoring harness and reward functions** (`feat/scoring-harness`, under $1 judge calls)
 - [ ] **Step 5 — Distributed training pipeline: SFT, LoRA vs full, DPO** (`feat/training-pipeline`, free)
 - [ ] **Step 6 — GRPO stage** (`feat/grpo`, free)
@@ -121,7 +121,7 @@ and Cohere API spend counts against the budget.
 ~$34 expected, ~$49 high (full table in [`compute-plan.md`](compute-plan.md)). The $20 target
 is not reachable for a genuinely distributed run; the $50 cap holds in every case.
 
-**Spend to date: $0.** Nothing has been provisioned.
+**Spend to date: $4.98** (step 3, Claude API only; ledger in the step 3 outcome). Nothing has been provisioned.
 
 ## Known risks
 
@@ -291,3 +291,234 @@ nothing to tear down.
 `terraform validate` and `terraform plan` clean; after apply, the budgets list shows the $20
 and $50 alerts and the enabled APIs list shows the APIs; quota requests visible with status;
 `gcloud config configurations list` shows `default` still on `latentspacemail@gmail.com`.
+
+### Step 3 — Training data generation (`feat/training-data`, ~$2 to $4 Claude API)
+
+Plan approved 2026-10-13. Status: complete (see outcome and deviations).
+
+###### Context
+
+Steps 5 to 9 (SFT, LoRA vs full, DPO, GRPO, JAX) all train on data that does not exist yet. This step builds
+it: Claude-generated Q/A pairs from the 955 corpus chunks, the DPO preference pairs, and the GRPO prompt
+set, then freezes them behind an automated leakage check against the 55 golden questions. Claude is a
+build-time dependency only (never at inference). Step 4 (scoring) and step 5 (training) consume the file
+formats defined here, so the schemas are part of the deliverable.
+
+Facts from exploration that shape the design:
+- `rag-with-receipts` has **no** bulk-generation, batch-API, retry, dedup, or leakage code. It calls
+  `anthropic.Anthropic()` directly with forced tool output (`submit_answer`), no `temperature` (Sonnet 5
+  family rejects sampling params), and `ANTHROPIC_API_KEY` from the environment. Everything here is new
+  code; I reuse its conventions (forced tool schemas, env-var key, config-driven model id) and its embedder
+  choice (`BAAI/bge-large-en-v1.5`, normalized, so dot product = cosine).
+- Golden set style (hand-written, terse): 35 single-hop lookups, 15 multi-hop with arithmetic shown
+  ("11,000 x 85 XP = 935,000"), 5 out-of-corpus questions. Training data mimics that style and mix, never the
+  questions themselves.
+- Corpus: 955 chunks, 110 pages, 512 table / 376 prose / 67 infobox, ~256k tokens, ~268 tokens/chunk.
+- The RAG side answers as `{answerable, answer, citations}`. The fine-tuned model is closed-book and cites
+  nothing, so its target is plain text; abstention is a fixed phrase (below). How step 4 scores grounding for
+  a closed-book answer is that step's problem; this step supplies the `evidence` and `reference_facts`
+  fields it will need.
+
+Decisions confirmed with the user: **Sonnet 5.5 via the Batch API**, **~6,000 SFT pairs**,
+**embedding + n-gram leakage filter that drops near-duplicate questions** (facts may overlap with the golden
+set by design; only the questions are excluded, and the README says so).
+
+#### Outputs (frozen, committed)
+
+All under `data/training/`, JSONL, UTF-8, LF (covered by the `data/** -text` rule in `.gitattributes`):
+
+| File | Rows | Schema |
+|---|---|---|
+| `sft_train.jsonl`, `sft_val.jsonl` | ~5,700 / ~300 | `id, kind, messages[system,user,assistant], chunk_ids, evidence, reference_facts` |
+| `dpo.jsonl` | ~1,500 | `id, prompt_messages, chosen, rejected, rejected_kind (hallucinated\|verbose\|fabricated_abstention), chunk_ids` |
+| `grpo_prompts.jsonl` | ~800 (step 6 subsamples) | `id, kind, question, reference_answer, reference_facts, answerable, chunk_ids` |
+| `MANIFEST.json` | n/a | per-file SHA-256, row counts by kind, generator model id, prompt-template hashes, date, token usage and cost, leakage thresholds and results |
+
+SFT mix (target of ~6,000): ~3,300 single-hop (about 3.5 per chunk, more for table/infobox chunks),
+~1,500 multi-hop, ~900 abstention (15%, so the model learns to say it does not know). `kind` is
+`single_hop | multi_hop | unanswerable`, matching the golden set's types.
+`reference_facts` is a short list of strings (numbers, entity names) a correct answer must contain; step 4's
+fast local GRPO reward matches on it.
+Abstention target is one fixed phrase: "I don't have information about that in my Old School RuneScape Wiki
+knowledge." (constant in code, so step 4 can detect it exactly.)
+System prompt for SFT rows is a short closed-book OSRS assistant instruction (constant, in `prompts.py`).
+Rows store plain chat messages; the Qwen3 chat template (thinking disabled) is applied at training time in
+step 5, not baked in here.
+
+Splits: random 95/5 train/val by pair. Val measures format and loss, not generalization (memorization is the
+goal and the facts overlap by design); the README does not present it as held-out accuracy.
+DPO and GRPO prompts: DPO draws its prompts from the SFT pool (rejected answers are new); GRPO prompts are
+**freshly generated** with a different angle/seed so RL is not rewarded for pure recall of SFT rows.
+
+#### Generation pipeline
+
+New package `src/remember_or_retrieve/datagen/`:
+
+- `llm.py`: thin Anthropic wrapper. Builds Batch API requests (forced tool output, no sampling params),
+  submits, polls, collects, and writes raw results to untracked `data/raw/` (gitignored) so a crashed run
+  resumes instead of re-paying. Cost accounting from `usage` with prices read from config; a `--max-usd`
+  guard aborts before submit if the pre-computed token estimate exceeds it. API key from
+  `ANTHROPIC_API_KEY` only; the code checks the variable is set, never prints it. Client injectable so tests
+  use a fake.
+- `prompts.py`: all templates, plus a hash of each recorded in the manifest. Chunk text is wrapped in
+  delimiters and the model is told it is data, not instructions (wiki text is untrusted input); output is
+  forced through a JSON-schema tool, so injected text cannot change the format.
+- `sample.py`: chunk selection and pairing. Single-hop: per chunk, N scaled by `source_type` and
+  `token_count`. Multi-hop: chunk pairs from the same page (neighbouring sections) plus cross-page pairs
+  where one chunk mentions the other's page title; ~1,500 pairs sampled with a fixed seed. Abstention: for
+  each page cluster, Claude proposes plausible OSRS questions the shown chunks do not answer.
+- `validate.py`: programmatic gates. (1) Schema. (2) `evidence` quotes must be substrings of the cited
+  chunk(s) after whitespace normalization. (3) Every number in a single-hop answer appears in the evidence;
+  multi-hop answers must show the arithmetic and every operand must appear in the evidence. (4) Abstention
+  questions are verified by a second batch call: given the bge top-5 nearest chunks, Claude must answer
+  "not answerable" or the row is dropped (so "out-of-corpus" really is). (5) Multi-hop answers get an
+  independent second-pass solve (batch, cheap); disagreement drops the row. (6) Near-duplicate removal within
+  the training set (bge cosine and 5-gram Jaccard).
+- `leakage.py`: embeds every training question and the 55 golden questions with bge-large (CPU is fine for
+  ~8k short strings), drops any training question with cosine >= threshold or normalized 5-gram Jaccard >=
+  threshold against any golden question, or an exact normalized match. Starting thresholds 0.88 and 0.5 are
+  **calibrated, not assumed**: the script prints the top nearest training question per golden question and
+  the similarity histogram, I read the borderline cases by eye, and the final thresholds and the number
+  dropped are recorded in the manifest. A hard gate (`scripts/check_leakage.py`, also a test over the
+  committed files) fails if any frozen row is over threshold or equals a golden question.
+- `build.py`: orchestration. CLI `scripts/gen_training_data.py` with subcommands
+  `pilot | estimate | submit | collect | filter | freeze | report`.
+
+DPO rejected-answer construction (one Claude batch call per prompt, given the gold answer and chunks):
+`hallucinated` (fluent, confident, subtly wrong specifics, ~700), `verbose` (correct but padded, hedging,
+restating the question, ~500), `fabricated_abstention` (a confident invented answer to an unanswerable
+question, ~300). Chosen is the concise gold answer (or the abstention phrase). Stated limitation: these are
+**off-policy** synthetic rejecteds, not samples from the SFT model (which does not exist until the paid
+window); the README says so, and step 9 can optionally add on-policy pairs if budget allows.
+
+Dependencies (pinned, new optional extra `data`): `anthropic`, `numpy`, `sentence-transformers` (CPU torch).
+Added to `pyproject.toml`; `dev` extra unchanged. Config: new `training_data:` section in
+`config/config.yaml` (generator model id, per-kind targets, seeds, thresholds, output paths, `max_usd`,
+per-million-token prices). Model id and prices are verified with the claude-api reference at implementation
+time, not hardcoded from memory.
+
+#### Cost
+
+Estimated **$2 to $4** (matches the roadmap): ~955 single-hop calls, ~1,500 multi-hop, ~300 abstention
+proposals, plus verification and rejected-answer calls; mostly ~1k tokens in, ~0.5k out each, at Batch API
+50% pricing for Sonnet 5.5. The exact figure is computed by `estimate` from real token counts (the Anthropic
+count-tokens endpoint is free) and shown before any paid submit. Running total: **$0 now, ~$2 to $4 after this
+step, against the $20 target and $50 cap** (inside the roadmap's $3 to $7 Claude line). If the estimate
+exceeds $5, I stop and ask before submitting.
+
+Process gate: a **pilot** of ~20 chunks through the synchronous API (<$0.15) is printed for you to eyeball
+(answer style vs the golden set, arithmetic shown, abstention phrasing) before the full batch runs. You
+approve the printed estimate before `submit`.
+
+#### Security
+
+- Credential: `ANTHROPIC_API_KEY` env var only; never read from or echoed, no `.env` opened, not in config,
+  tests, logs, or manifest. Step 4 and 10 reuse the same variable.
+- No new public endpoint, IAM role, or cloud resource. No GCP contact at all.
+- Prompt-injection surface: corpus text is untrusted; mitigated by delimiting, forced tool schema, and
+  validation gates above. Raw API responses stay in the gitignored `data/raw/`.
+- Licensing: the corpus is CC BY-NC-SA 3.0 and the generated data is derived from it. `data/NOTICE.md` is
+  extended to say so, and the README later notes the resulting weights are non-commercial/ShareAlike.
+- Review `git diff --staged` for secrets before every commit.
+
+#### Tests (offline, fast; the one real API call is marked `slow`)
+
+- Schema and constants (`ABSTAIN_PHRASE`, kind names) and golden-compatible `kind` values.
+- `validate.py`: evidence-substring check passes/fails correctly; number-in-evidence gate; arithmetic
+  operand gate; dedup.
+- `leakage.py`: a paraphrase and an exact copy of a golden question are caught, an unrelated question passes
+  (small embedding model fixture or precomputed vectors so CI stays light).
+- `sample.py`: deterministic with a seed; kind mix and per-page coverage match targets; every chunk id exists.
+- `llm.py`: fake client; resume skips already-collected requests; `--max-usd` guard aborts; the key is never
+  logged.
+- Frozen-data tests over the committed files: row counts and mix within tolerance, ids unique, every
+  `chunk_id` in the corpus, no golden question present, SHA-256 matches `MANIFEST.json`, DPO chosen != rejected.
+- `ruff check`, `ruff format --check`, `pytest` green in CI (CI installs only the `dev` extra plus what the
+  frozen-data and unit tests need; the embedding test is `slow` or uses fixed vectors).
+
+#### Branch and workflow
+
+On approval: copy this plan into `docs/roadmap.md` under "Step 3" and mark the step in progress, then branch
+`feat/training-data`; small commits in order: config + deps + schemas; sampling; prompts + llm wrapper;
+validators; leakage; pilot (output not committed); full run; frozen data + manifest + tests; roadmap
+update. Any deviation (a threshold that needed changing, a kind count that came back different, real cost)
+goes into the roadmap entry. Nothing is committed directly to `main`.
+
+#### Verification
+
+1. `pytest`, `ruff check`, `ruff format --check` pass locally and in CI.
+2. Pilot output read by hand and approved before the full batch.
+3. `scripts/gen_training_data.py report` prints counts by kind, validation drop rates per gate, leakage drops,
+   and actual spend (vs estimate).
+4. `scripts/check_leakage.py` exits 0 on the frozen files and exits non-zero on a copy with one golden
+   question injected (checked once manually).
+5. `scripts/verify_data.py` plus the new manifest check pass. Spot-read ~30 random rows per kind.
+6. Spend recorded in the roadmap. Nothing billable remains running, so there is no teardown to confirm
+   (stated explicitly in the roadmap entry).
+
+#### Open items I will settle during implementation (not blocking approval)
+
+- Exact leakage thresholds (calibrated as above).
+- Exact per-kind counts after validation drops (target totals ~6,000 SFT, ~1,500 DPO, ~800 GRPO prompts; if a
+  gate drops far more than expected I regenerate that kind rather than lower the bar).
+
+#### Outcome and deviations from the plan (recorded 2026-10-13)
+
+**Result.** `data/training/`: `sft_train.jsonl` 4,841 + `sft_val.jsonl` 255 (5,096 SFT rows: 4,000
+single-hop, 422 multi-hop, 674 abstention), `dpo.jsonl` 1,500 (700 hallucinated, 500 verbose, 300
+fabricated-abstention), `grpo_prompts.jsonl` 404 (275 / 62 / 67), `MANIFEST.json`. The leakage gate
+(`scripts/check_leakage.py`) reports 0 leaks over 7,000 training questions and fails when a golden
+question is injected. 30 tests pass.
+
+**Spend ledger (USD, real, billed at batch rates except the pilots).**
+
+| Item | Cost |
+|---|---|
+| Pilots (sync calls, standard rate) | 0.282 |
+| Generation batch (2,685 requests) | 4.294 (estimate 3.70) |
+| Verification batch (1,695 requests) | 0.246 |
+| DPO rejected-answer batch (1,800 requests) | 0.160 |
+| **Step 3 total** | **4.98** |
+
+Running project total: $4.98 of the $20 target and $50 cap. This is above the plan's $2 to $4 but
+inside the roadmap's $3 to $7 Claude line. No cloud resource was created, so there is no teardown.
+
+**Deviations from the approved plan.**
+
+- **Cost was re-planned after the first estimate.** The plan's $2 to $4 assumed Sonnet 5.5 for
+  everything. The first estimate was $13.10, so (with the user's approval) single-hop, abstention,
+  verification, and DPO-rejected calls use **Haiku 5.5** (`cheap_model`); only multi-hop generation
+  uses Sonnet 5.5. The estimator was recalibrated against real pilot usage (chars/2.6) and still came in
+  16% under the actual generation cost.
+- **Structured outputs, not forced tools.** Sonnet 5.5 rejects forced `tool_choice` with a 400, so
+  every call uses `output_config.format` (JSON schema). Thinking is "off" via `between_tools` on
+  Sonnet and `disabled` on Haiku; multi-hop and the multi-hop solver run adaptive at medium effort.
+- **Multi-hop pairing was redesigned after the pilots.** Random same-page pairs produced contrived
+  questions. Candidates are now adjacent same-page chunks plus cross-page links through specific page
+  titles (mentioned in at most 25 chunks, one best-overlap partner), and both chunks must contain at
+  least 6 distinct numbers. That left 1,147 candidates, so multi-hop requests were cut from 2,000/300
+  to 950/150. Yield after all gates is about 40%. **Result: 422 SFT multi-hop rows, not 1,500 (and 62
+  GRPO, not 200).** The model sees less multi-hop arithmetic in training than the plan intended; this
+  is a known weakness to look for in the step 9 multi-hop scores. Single-hop was raised to 4,000
+  (7/6/5 pairs per table/infobox/prose chunk) to partly compensate.
+- **SFT is 5,096 rows, not ~6,000**; abstention is 674 (13%), GRPO is 404, not ~800.
+- **Operand check is approximate.** For multi-hop, "every operand must appear in evidence" is
+  implemented as: at most 2 numbers in the answer may be absent from the evidence and question (the
+  result and one intermediate). The independent Haiku solve is the second line of defence (27 rows
+  dropped for disagreement).
+- **Leakage threshold calibrated by hand: cosine 0.85, not 0.88.** At 0.88, real paraphrases of golden
+  questions survived (0.877 and 0.878). 0.85 drops 120 questions in total, plus an exact/5-gram check.
+  The generator reproduced several golden questions verbatim (cosine 1.000), which is expected since the
+  golden set was written from the same pages.
+- **Estimation used a heuristic**, not the free count-tokens endpoint (3,000+ calls were not worth it).
+
+**Caveats to carry into the README.**
+
+- **Abstention is "not in this corpus", not "not true".** Some abstention questions are real OSRS facts
+  that are simply outside the 955 chunks (for example the God Wars Dungeon requirement). 280 candidates
+  that the verifier judged answerable from the nearest chunks were dropped, but the model will still be
+  trained to decline facts that exist on the wiki beyond the corpus.
+- **DPO rejected answers are off-policy** (written by Haiku, not sampled from the SFT model).
+- **The validation split measures format and loss, not generalization**; facts overlap with training
+  by design, and with the golden set (only the questions are excluded).
+- Some multi-hop questions are still somewhat contrived even after the pairing fix.

@@ -11,8 +11,14 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "numpy",
     "pytest",
     "ruff",
+]
+data = [
+    "anthropic==1.13.0",
+    "numpy",
+    "sentence-transformers",
 ]
 
 [build-system]
