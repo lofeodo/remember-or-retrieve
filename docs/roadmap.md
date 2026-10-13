@@ -971,3 +971,159 @@ sft_full FSDP 402 tok/s/device, sft_lora DDP 542, dpo 375; LoRA trains 131k of 9
 
 **Spend.** $0. Nothing billable was created, so there is no teardown to confirm. Running total stays
 $5.27 of the $20 target and $50 cap.
+
+### Step 6 — GRPO stage (`feat/grpo`, free)
+
+Plan approved 2026-10-13. Status: in progress.
+
+##### Context
+
+Steps 3 to 5 produced the frozen data (`data/training/grpo_prompts.jsonl`, 404 rows), the scorer
+and fast reward (`scoring/reward.py`, `RewardScorer`), and the distributed SFT / LoRA / DPO code.
+No RL code exists. This step writes and proves the GRPO stage that runs after DPO in the one paid
+window (step 9): group rollouts, reward from step 4, DDP learner, KL to the DPO policy, and
+rollout-throughput profiling. Code only, smoke-tested on the tiny model. No GPU rental, no GCP, no
+API spend, no real checkpoint. **Cost: $0. Running total stays $5.27 of the $20 target and $50 cap.**
+Nothing billable is created, so there is no teardown to confirm.
+
+Separate from step 5 because rollouts are a different bottleneck (generation, not gradients) and a
+different failure mode (reward hacking, collapse).
+
+##### What exploration found
+
+- `RewardScorer(cfg, chunk_text)` is a class (not a function). `.rewards(rows, completions)` gives one
+  float in [-1, 1]; `RewardBreakdown` gives the components to log. Pure Python, runs inside any rank.
+- 4 of 404 GRPO rows score below 0.9 on their own reference answer (frozen-data quirks, noted in
+  step 4). The loader drops rows whose reference scores < 0.9 rather than editing frozen data.
+- **Checkpoint chain gap.** DPO saves only a LoRA adapter trained on top of a merged SFT base, and
+  `model.load_trained` merges an adapter onto the plain pretrained base. Loading a DPO adapter
+  alone therefore silently drops SFT. GRPO needs the whole chain (SFT -> DPO -> GRPO).
+- DPO has no resume; SFT's resume is built into `train_sft`. Under DDP, rollouts must call
+  `net.module.generate` in eval mode with `use_cache=True` (gradient checkpointing sets it False).
+- `profiling.py`'s docstring already reserves "step 6 adds rollout throughput to the same schema".
+
+##### Decisions (defaults; change at approval)
+
+1. **Rollout engine: Hugging Face `generate` under DDP**, own GRPO loop (same hybrid pattern as DPO:
+   no TRL, no new dependencies). It runs on the CPU smoke test, so it is proven before the paid
+   window. vLLM stays in the project for serving (steps 11 and 12); using it for rollouts too would
+   add GPU-only code, per-step weight sync from the LoRA, and VRAM sharing on a 40 GB card, none
+   testable before the meter starts. README names it as the road not taken for training.
+2. **Scale: 16 prompts x 8 samples per step, ~88 steps** (4 epochs over ~360 training prompts;
+   ~40 held out). 128 completions per step, ~450k generated tokens in total. Config values, so the
+   step 8 rehearsal and step 9 can scale up or down.
+
+##### Algorithm
+
+- **Policy init** = merged DPO model (chain-loaded), fresh LoRA on top (r/alpha from `training.lora`,
+  **LoRA dropout 0** for GRPO so rollout and learner probabilities match). **Reference** =
+  adapter-disabled model, the same no-second-copy trick as DPO (matters at 40 GB).
+- **Per step:** a global batch of 16 prompts is sharded across ranks (4 per rank, same
+  `data.global_batches` / `rank_slice` helpers). Each rank samples G=8 completions per prompt
+  (temperature 1.0, `max_new_tokens` 96; answers p99 is 42 words), scores them with
+  `RewardScorer`, and computes group-normalised advantages `(r - mean) / (std + eps)`. A prompt's
+  whole group lives on one rank, so advantages need no communication. Zero-variance groups
+  contribute nothing and their share is logged.
+- **Update:** one gradient step per rollout batch (on-policy), so the importance ratio is 1 and no
+  old-policy pass or clipping is needed; this is stated rather than hidden. Loss = `-A * logp`
+  per completion token plus `beta * KL(k3 estimator vs reference)`, beta 0.04, normalised by the
+  **global** completion-token count (all-reduced) so 1 and N ranks are the same training job, as in
+  SFT/DPO. Micro-batched with `parallel.accumulate`, grad clip, `lr_at` cosine schedule, AdamW on
+  LoRA params, lr 1e-5.
+- **Held-out eval:** ~40 prompts (stratified by kind, seeded) scored greedily at start, end, and every
+  N steps. This is a training-signal curve only; the golden-set judge in step 9 is the real measure.
+- **Resume:** adapters + optimizer via `parallel.save_resume_state(trainable_only=True)` every
+  `checkpoint_every` steps plus a small `trainer_state.json` (step). Prompt order and per-step
+  sampling seeds derive from (seed, step, rank), so resume is deterministic.
+
+##### Design
+
+Changes under `src/remember_or_retrieve/training/` unless noted:
+
+- `grpo.py` (new): `load_prompts`, `rollout` (batched sampling, left-pad, trim at `<|im_end|>`,
+  restores `use_cache`/train mode), `group_advantages`, `grpo_loss` (pure, unit-tested),
+  `learn` (takes rollouts as input, so 1-vs-N equivalence is testable with injected fixed
+  rollouts), `train_grpo` (loop, checks, profile, `run.json`).
+- `model.py`: `load_trained` follows a chain. DPO and GRPO write a small `base.json`
+  (`{"init_from": ...}`) beside their adapter; the loader recursively builds base -> merge -> merge.
+  `dpo.py` gets a 3-line change to write it. Existing SFT/DPO behaviour unchanged.
+- `data.py`: `encode_grpo_prompt` (reuses `tok.prompt_ids` with `SFT_SYSTEM_PROMPT`, same prompt
+  as `generate.py`).
+- `profiling.py`: backward-compatible `RankStats.rollout_s` / `rollout_tokens` / `reward_s`;
+  `build_profile` adds a `rollout` block: generated tokens/s (global and per device),
+  completions/s, rollout share of step time, reward time, mean and p95 completion length, learner
+  tokens/s, peak memory per rank. Rollout throughput is the named RL bottleneck in `CLAUDE.md`.
+- `checks.py`: reuse ranks, gradient/weight checksums, loss finite, GPU busy. Add
+  `check_rollout_health` (rewards finite; at least some groups have non-zero variance; completions
+  not all truncated or all identical).
+- `launch.py`: `grpo` branch in `_ray_loop`; `smoke.py`: `grpo_job`.
+- `scripts/train.py`: `grpo --init-from DIR` subcommand (stage name `grpo`, `cmd_stage` shape kept);
+  `scripts/compare_stages.py`: rollout columns.
+- `config/config.yaml`: `training.grpo` (group_size, prompts_per_step, epochs, beta, lr,
+  temperature, max_new_tokens, heldout, eval_every, checkpoint_every), `training.strategy.grpo: ddp`.
+  Smoke override: 2 prompts per rank, G=2, 4 steps.
+- Logged per step into `run.json` and Ray report: mean reward and each `RewardBreakdown`
+  component, KL, completion length, abstention rate on answerable vs unanswerable prompts,
+  zero-variance group fraction, truncation rate.
+
+##### Tests
+
+- **Fast (CI `test` job, torch-gated like `test_training_loops.py`):** `group_advantages` (known
+  values, zero-variance group is zero, mean zero per group); `grpo_loss` against a hand-computed
+  case, KL non-negative and zero at the reference; prompt loader drops the 4 bad rows and the
+  held-out split is deterministic and disjoint; `load_trained` chain resolution with a fake
+  `base.json` layout; profile rollout block from synthetic stats; `check_rollout_health` fails
+  on all-equal rewards / non-finite.
+- **Slow smoke (`smoke-distributed` job, Linux, 2 workers, gloo):** GRPO runs end to end on the
+  tiny model after SFT-LoRA -> DPO (exercises the chain); all distribution checks pass; learner
+  with injected rollouts matches 1-rank vs 2-rank loss curve within `equivalence_rel_tol`;
+  kill-and-resume continues; Ray Train path; `generate` loads the GRPO adapter and writes a valid
+  answers file. Rollout sampling is per-rank random, so equivalence is claimed for the learner
+  only, and the plan says so.
+- `ruff check`, `ruff format --check` green.
+
+##### Security
+
+No credentials, endpoints, IAM, or GCP contact. No new dependencies (no `trl`, no `vllm`).
+Same model-loading rules: `trust_remote_code=False`, pinned revision, safetensors only,
+`torch.load(weights_only=True)`. The reward is offline and deterministic. Prompts are our own
+frozen data, but completions are untrusted model output: they go only into the reward function and
+JSON logs, never executed.
+
+##### Branch and workflow
+
+On approval: copy this plan into `docs/roadmap.md` under Step 6 and mark it in progress; branch
+`feat/grpo`. Small commits: config + chain loading (with DPO `base.json`); prompts/data; advantages
+and loss (pure); rollout; learner and loop; profiling and checks; launch + CLI; smoke tests + CI;
+roadmap outcome. Deviations go into the roadmap entry. Nothing to `main` directly.
+
+##### Verification
+
+1. `pytest`, `ruff check`, `ruff format --check` green locally and in CI; smoke job green.
+2. Docker smoke suite: GRPO passes all checks, SFT -> DPO -> GRPO chain loads the full stack, resume
+   works, 1-vs-2 rank learner equivalence holds.
+3. Deliberately broken run (one rank not syncing) fails the checks, shown once.
+4. `profile.json` for the smoke GRPO run contains the rollout block; `compare_stages.py` renders it.
+5. Reward sanity on the real prompts: a stub "policy" returning each reference answer averages
+   >= 0.9; one returning the abstention phrase averages near 0 (guards against a reward that
+   cannot separate good from bad before it costs GPU time).
+6. Roadmap entry records plan, deviations, "Spend: $0, nothing billable, no teardown".
+
+##### Cost carried forward (for step 9, estimated, not measured)
+
+~88 steps at an estimated 6 to 15 s/step plus model load: **~0.2 to 0.5 GPU-hours, ~$1.8 to $4.4**
+on 4x A100 40GB spot, at or below the compute plan's 0.4 to 0.8 hour line. If the step 8
+rehearsal shows rollouts dominating, the cut order is fewer steps or a smaller group, never the
+distributed setup.
+
+##### Known limits
+
+- Real rollout tokens/s, memory and the GPU branches (NCCL, `generate` on 8B with LoRA, NVML)
+  are only measured in step 9. HF generate with an unmerged adapter is slower than merged
+  weights or vLLM; it is measured, not assumed.
+- Only ~360 distinct RL prompts (62 multi-hop in total), so the policy can overfit them; the golden
+  set judge decides whether GRPO beat DPO, and the README reports it either way.
+- The reward is a proxy (numeric facts, abstention, unsupported numbers, length), not the judge.
+  Reward hacking is watched through the logged components, not assumed absent.
+- On-policy single update means no PPO-style clipping; this is the intended GRPO simplification
+  at this scale, not a PPO implementation.
