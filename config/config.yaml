@@ -71,7 +71,7 @@ scoring:
   reference_path: data/eval/rag_reference.json
   grounding:
     nli_model: cross-encoder/nli-deberta-v3-base
-    nli_revision: null # pinned when the model is first downloaded (see roadmap step 4)
+    nli_revision: 6c749ce3425cd33b46d187e45b92bbf96ee12ec7 # pinned 2026-10-13
     batch_size: 32
     entailment_threshold: 0.5
     contradiction_threshold: 0.5

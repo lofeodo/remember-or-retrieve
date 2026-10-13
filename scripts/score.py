@@ -164,13 +164,15 @@ def cmd_rag_ground(args) -> int:
     corpus = {c.chunk_id: c for c in load_corpus()}
     checker = GroundingChecker.from_config(SC["grounding"])
     scored = rag_reference.reference_scored(ref, golden)
-    answers = [s.answer for s in scored]
-    regrounded = score_answers(answers, golden, None, corpus, checker)  # abstention-only labels
-    by_type = {}
-    for g, s in zip(golden, regrounded, strict=True):
-        if s.claims:
-            by_type.setdefault(g.type, []).append(s.claims)
-    out = {"all": metrics.grounding_stats([s.claims for s in regrounded if s.claims])}
+    claim_lists, by_type = [], {}
+    for g, s in zip(golden, scored, strict=True):
+        if not g.answerable or s.answer.abstained:
+            continue
+        claims = checker.check_answer(s.answer.answer, [corpus[c] for c in g.gold_chunk_ids])
+        if claims:
+            claim_lists.append(claims)
+            by_type.setdefault(g.type, []).append(claims)
+    out = {"all": metrics.grounding_stats(claim_lists)}
     out |= {t: metrics.grounding_stats(c) for t, c in by_type.items()}
     out["native_citation_grounding_for_comparison"] = ref["summary"]["grounding"]
     dump(out)
