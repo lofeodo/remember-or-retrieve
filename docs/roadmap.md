@@ -21,7 +21,7 @@ long prose:
 - [x] **Step 1 — Repo scaffold** (`feat/scaffold`, free)
 - [x] **Step 2 — Compute plan, GCP bootstrap, GPU quota** (`feat/compute-plan`, free)
 - [x] **Step 3 — Training data generation** (`feat/training-data`, $4.98 Claude API)
-- [ ] **Step 4 — Scoring harness and reward functions** (`feat/scoring-harness`, under $1 judge calls)
+- [x] **Step 4 — Scoring harness and reward functions** (`feat/scoring-harness`, $0.29 judge calls)
 - [ ] **Step 5 — Distributed training pipeline: SFT, LoRA vs full, DPO** (`feat/training-pipeline`, free)
 - [ ] **Step 6 — GRPO stage** (`feat/grpo`, free)
 - [ ] **Step 7 — JAX training stage** (`feat/jax-stage`, free)
@@ -121,7 +121,7 @@ and Cohere API spend counts against the budget.
 ~$34 expected, ~$49 high (full table in [`compute-plan.md`](compute-plan.md)). The $20 target
 is not reachable for a genuinely distributed run; the $50 cap holds in every case.
 
-**Spend to date: $4.98** (step 3, Claude API only; ledger in the step 3 outcome). Nothing has been provisioned.
+**Spend to date: $5.27** (step 3 $4.98 plus step 4 $0.29, Claude API only; ledgers in each step's outcome). Nothing has been provisioned.
 
 ## Known risks
 
@@ -525,7 +525,7 @@ inside the roadmap's $3 to $7 Claude line. No cloud resource was created, so the
 
 ### Step 4 — Scoring harness and reward functions (`feat/scoring-harness`, under $1 judge calls)
 
-Plan approved 2026-10-13. Status: in progress.
+Plan approved 2026-10-13. Status: complete (see outcome and deviations).
 
 #### Context
 
@@ -707,3 +707,59 @@ teardown to confirm (stated in the roadmap entry).
   length budget for the verbosity term (from SFT answer lengths).
 - Reward weights: start from the config defaults and adjust only to fix a failed sanity check, recording
   what changed.
+
+#### Outcome and deviations from the plan (recorded 2026-10-13)
+
+**Result.** `src/remember_or_retrieve/scoring/` (schema, abstention, metrics, judge, grounding,
+reward, pipeline, rag_reference), `scripts/score.py` (`replay | score | rag-judge | rag-nli |
+rag-ground | reward-check`), `scripts/import_rag_reference.py`, and `data/eval/rag_reference.json`
+(pinned to `rag-with-receipts` commit `6b8d032`, SHA-256 in `PROVENANCE.json`). 81 tests pass in CI
+mode; the `slow` NLI test passes locally.
+
+**Validation, against the pass criteria set before running.**
+
+| Check | Result |
+|---|---|
+| Replay of the recorded run | Exact: 0.83636 (46/55), single-hop 1.0, multi-hop 0.4667, all six label counts, grounded 0.948, contradicted 0.052, fully grounded 0.909, 77 citations / 44 answers. Our abstention logic plus the recorded judge verdict rebuilds upstream's label on all 55 questions. |
+| NLI re-implementation | 77 of 77 labels identical, max probability difference 1.1e-5. Label order read from the model's own config: `{0: contradiction, 1: entailment, 2: neutral}`. Model revision pinned to `6c749ce3425cd33b46d187e45b92bbf96ee12ec7`. |
+| Judge re-score (2 fresh passes, 46 answered) | Accuracy 0.8364 on both passes (delta +0.0000 against the bar of 0.055). Agreement with recorded verdicts 45/46 = 97.8% (bar 90%). The one difference is q048, `incorrect` to `partially_correct`, both counted wrong. Run-to-run agreement 100%. |
+| Gold-chunk grounding on the RAG answers (informational) | 85.9% grounded over 85 claims / 46 answers (single-hop 89.3%, multi-hop 79.3%), contradicted 9.4%, ungrounded 4.7%, fully grounded answers 82.6%. Native citation grounding was 94.8%. Different definition, no match expected. |
+| Reward vs DPO pairs | reward(chosen) > reward(rejected) on 691/700 hallucinated (98.7%, bar 97%), 493/500 verbose (98.6%, bar 97%), 300/300 fabricated abstention (bar 100%). Misses are pairs where the chosen answer itself lacks a text fact. |
+| Reward vs GRPO prompts | Reference answers score >= 0.9 on 400/404; the abstention phrase scores 1.0 only on unanswerable prompts. |
+| Reward adversarial cases | Empty, abstain-everything, confident wrong number, padded-with-right-number, number spray, and a stuffed hallucinated fact all score below a concise correct answer. |
+| Reward vs judge on RAG answers | The numeric-fact match agrees with the judge on 31/34 answers whose gold answer has numbers. The 3 misses are gold-format quirks ("04-Jan-01" vs "4 January 2001", "1" vs "One"). |
+
+**Spend ledger (USD).** Judge re-score, two passes of 46 calls: **0.293** (estimate was 0.3 to 0.6).
+Running project total: **$5.27** of the $20 target and $50 cap. Nothing billable was created, so
+there is no teardown to confirm.
+
+**Deviations from the approved plan.**
+
+- **Soft matching for text facts in the reward.** Exact substring matching gave a paraphrased correct
+  answer partial credit (8 of 404 GRPO reference answers fell below 0.9). Non-numeric facts now count
+  as present at >= 60% word recall, proportional below. The 4 remaining rows are data quirks in the
+  frozen GRPO set: the reference answer omits one of its own facts (3 rows) or a fact contains a U+FFFD
+  character (1 row). The frozen data was not edited; the test allows up to 2%. Step 6 can drop them.
+- **Number-spray guard added** (`stray_number`): a short answer listing every number from the evidence
+  would otherwise get full correctness credit with no hallucination penalty.
+- **Reward range is [-1, 1]**, not [0, 1], so GRPO's group-relative advantage still separates two bad
+  completions.
+- **Judge and CLI used the sync API**, as upstream does, with a disk cache keyed by (model, prompt hash,
+  question, gold, candidate). `--passes 2` re-judges with the cache bypassed.
+- **The reference file is a slim copy** (answers, citations without chunk text, recorded verdicts). Its
+  `PROVENANCE.json` entry keeps the file's existing CRLF line endings.
+- `test_data.py::test_missing_file_reported` now expects 3 manifest files (it hard-coded 2).
+
+**Caveats to carry into the README.**
+
+- **The judge is not deterministic** and sees only question, gold answer and candidate. It was stable here
+  (100% run-to-run on 46 answers), but that is a small sample; step 10 should attach the measured noise
+  to every comparison and re-run if a headline gap is within one or two questions.
+- **Gold-chunk grounding is a stricter, different measure** than the RAG's native citation grounding. A
+  claim that needs two chunks together can read as ungrounded against either alone, and the NLI model
+  reads flattened tables poorly (thresholds untouched, as upstream). It is reported for all four systems
+  the same way and never mixed with the native number.
+- **Numeric-fact reward cannot read format variants** (dates, number words), so it is a training signal,
+  not a grader. Final checkpoint scores come from the judge.
+- Candidate answers are untrusted text in the judge prompt, kept verbatim for comparability; the forced
+  enum output limits what an injection can do.
