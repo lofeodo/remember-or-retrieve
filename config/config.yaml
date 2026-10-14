@@ -24,7 +24,7 @@ compute:
   on_demand_usd_per_hour: 14.69
   regions: [us-central1, us-east1, europe-west4]
   fallback_machine: a2-ultragpu-4g # 4x A100 80GB, spot 12.17/hr
-  jax_model: null # chosen and verified in step 7 (Gemma 2B to 4B class; gated on Hugging Face)
+  jax_model: gemma4-e4b-it # decided and verified in step 7; see the `jax:` section
 
 budget:
   target_usd: 20
@@ -174,3 +174,53 @@ training:
     steps: 6
     rows: 96
     grpo: { group_size: 2, prompts_per_step: 4, steps: 4, rows: 16, heldout: 4, max_new_tokens: 6 }
+
+jax:
+  # Step 7. JAX/XLA LoRA fine-tune of Gemma 4 E4B on the same SFT data, data-parallel with
+  # jax.sharding. Own environment (Python 3.12, `jax` extra); Ray is not used here.
+  model:
+    name: gemma4-e4b-it # gemma library CheckpointPath.GEMMA4_E4B_IT
+    checkpoint: gs://gemma-data/checkpoints/gemma4-e4b-it # public bucket, no token needed
+    tokenizer: gs://gemma-data/tokenizers/tokenizer_gemma4.model
+    fallback: gemma4-e2b-it # if E4B does not fit or runs long in the paid window
+    dtype: bfloat16
+  out_dir: data/checkpoints/jax # untracked
+  max_length: 320 # same bound as the PyTorch SFT; Gemma's tokenizer is checked by a test
+  lora:
+    rank: 64 # gemma's LoRA has no alpha: scale is fixed at 1, so lr_lora is tuned instead
+    dtype: float32 # adapter masters in fp32, base weights bf16
+  sft:
+    epochs: 5
+    lr: 2.0e-4
+    warmup_ratio: 0.03
+    weight_decay: 0.0
+    max_grad_norm: 1.0
+    global_batch_size: 64
+    micro_batch_size: 4 # per device; Gemma's 262k vocab makes fp32 logits large (B x S x 262144)
+    seed: 1729
+    eval_every: 50
+    checkpoint_every: 100
+  pad_multiple: 64 # batch width rounded up to this, so XLA compiles few shapes
+  mesh_axis: data
+  profiling:
+    warmup_steps: 2 # excludes the XLA compile step; compile time is reported separately
+    trace_steps: 3 # jax.profiler window; 0 disables
+    a100_bf16_peak_tflops: 312
+    gpu_util_sample_s: 1.0
+    min_median_gpu_util: 30 # percent, every device (GPU runs only)
+  checks:
+    equivalence_rel_tol: 5.0e-3 # 2-device vs 1-device loss curve
+    params_identical_tol: 0.0 # LoRA params must match bitwise across devices
+  smoke:
+    # Tiny randomly initialised Gemma 4-shaped model; real tokenizer (vocab 262144).
+    embed_dim: 64
+    hidden_dim: 128
+    num_heads: 4
+    num_kv_heads: 2
+    head_dim: 16
+    per_layer_input_dim: 16
+    num_layers: 4
+    steps: 12
+    rows: 96
+    rank: 4
+    lr: 5.0e-3 # a random tiny model barely moves at the real lr in a dozen steps

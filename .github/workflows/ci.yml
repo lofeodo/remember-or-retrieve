@@ -39,3 +39,19 @@ jobs:
       - run: pytest -m slow tests/test_training_smoke.py tests/test_training_tokenization.py -q
         env:
           PYTHONFAULTHANDLER: "1" # a native abort in a worker prints a Python traceback
+
+  # Step 7. The JAX LoRA stage on a tiny Gemma 4 over two virtual CPU devices. Own job because
+  # gemma 4.x needs Python 3.12 while the PyTorch stack stays on 3.11.
+  smoke-jax:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev,jax]"
+      - run: pytest -m slow tests/test_jax_smoke.py -q
+        env:
+          XLA_FLAGS: --xla_force_host_platform_device_count=2

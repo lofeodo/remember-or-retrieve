@@ -21,6 +21,7 @@ def row(p: dict) -> list[str]:
     peak = max(p["peak_mem_gb_per_rank"]) if p["peak_mem_gb_per_rank"] else 0.0
     return [
         p["stage"],
+        p.get("framework", "pytorch"),
         p.get("strategy", "?"),
         str(p["world_size"]),
         f"{p['trainable_params']:,} / {p['total_params']:,}",
@@ -34,6 +35,7 @@ def row(p: dict) -> list[str]:
 
 HEADER = [
     "stage",
+    "framework",
     "strategy",
     "GPUs",
     "trainable / total params",

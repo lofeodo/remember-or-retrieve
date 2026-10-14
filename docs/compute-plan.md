@@ -17,7 +17,7 @@ here are USD.
 | Training machine | `a2-highgpu-4g`: 4x A100 40GB, spot ~$8.82/hr (on-demand ~$14.69) |
 | Full fine-tune | PyTorch FSDP full-shard across the 4 GPUs, via Ray Train |
 | LoRA, DPO, GRPO | DDP (base fits on one 40GB GPU), via Ray Train |
-| JAX stage | Gemma 2B to 4B class on the same 4 GPUs (model chosen in step 7; Gemma is gated on Hugging Face and needs a license-accepted token) |
+| JAX stage | Gemma 4 E4B (7.5B parameters in bf16, about 15 GB) on the same 4 GPUs, chosen in step 7; weights come from a public GCS bucket, no token needed |
 | Region | us-central1 first, then us-east1 and europe-west4 |
 
 ## Why 8B, not the 13B to 34B in CLAUDE.md

@@ -19,3 +19,14 @@ def test_compute_plan_is_consistent_with_budget():
     assert compute["spot_usd_per_hour"] < compute["on_demand_usd_per_hour"]
     assert compute["train_gpu_count"] >= 2  # distributed means more than one device
     assert budget["target_usd"] <= budget["expected_usd"] <= budget["cap_usd"]
+
+
+def test_jax_stage_config_is_consistent():
+    cfg = load_config()
+    jax_cfg = cfg["jax"]
+    assert cfg["compute"]["jax_model"] == jax_cfg["model"]["name"]
+    sft = jax_cfg["sft"]
+    per_device = sft["global_batch_size"] // cfg["compute"]["train_gpu_count"]
+    assert sft["global_batch_size"] % cfg["compute"]["train_gpu_count"] == 0
+    assert per_device % sft["micro_batch_size"] == 0  # whole accumulation steps on 4 devices
+    assert jax_cfg["max_length"] == cfg["training"]["max_length"]  # same SFT rows, same bound

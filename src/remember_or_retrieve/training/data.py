@@ -50,8 +50,10 @@ def read_jsonl(path: str | Path) -> list[dict]:
         return [json.loads(line) for line in f if line.strip()]
 
 
-def encode_sft_row(tok: Tokenizer, row: dict, max_length: int) -> dict:
-    """Tokenize one SFT row. Only the assistant answer (and its closing `<|im_end|>`) is trained on.
+def encode_sft_row(tok: Tokenizer, row: dict, max_length: int, end_token: str = IM_END) -> dict:
+    """Tokenize one SFT row. Only the assistant answer (and its closing end-of-turn token) is
+    trained on. `end_token` is the tokenizer's end-of-turn marker: `<|im_end|>` for Qwen3, and
+    `<turn|>` for Gemma 4 (the JAX stage), whose tokenizer adapter understands it in `encode`.
 
     The prompt is the template's generation prompt, exactly what inference sees, so there is no
     train/serve skew in the thinking-disabled prefix.
@@ -59,7 +61,7 @@ def encode_sft_row(tok: Tokenizer, row: dict, max_length: int) -> dict:
     messages = row["messages"]
     assert messages[-1]["role"] == "assistant", row["id"]
     prompt = tok.prompt_ids(messages[:-1])
-    target = tok.encode(messages[-1]["content"] + IM_END)
+    target = tok.encode(messages[-1]["content"] + end_token)
     ids = prompt + target
     if len(ids) > max_length:
         raise ValueError(f"{row['id']}: {len(ids)} tokens exceeds max_length {max_length}")
@@ -67,8 +69,10 @@ def encode_sft_row(tok: Tokenizer, row: dict, max_length: int) -> dict:
     return {"id": row["id"], "input_ids": ids, "labels": labels}
 
 
-def encode_sft(tok: Tokenizer, rows: list[dict], max_length: int) -> list[dict]:
-    return [encode_sft_row(tok, r, max_length) for r in rows]
+def encode_sft(
+    tok: Tokenizer, rows: list[dict], max_length: int, end_token: str = IM_END
+) -> list[dict]:
+    return [encode_sft_row(tok, r, max_length, end_token) for r in rows]
 
 
 def collate(examples: list[dict], pad_id: int) -> dict:
