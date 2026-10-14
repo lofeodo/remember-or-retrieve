@@ -24,7 +24,7 @@ long prose:
 - [x] **Step 4 — Scoring harness and reward functions** (`feat/scoring-harness`, $0.29 judge calls)
 - [x] **Step 5 — Distributed training pipeline: SFT, LoRA vs full, DPO** (`feat/training-pipeline`, free)
 - [x] **Step 6 — GRPO stage** (`feat/grpo`, free)
-- [ ] **Step 7 — JAX training stage** (`feat/jax-stage`, free)
+- [ ] **Step 7 — JAX training stage** (`feat/jax-stage`, free, in progress)
 - [ ] **Step 8 — Training infrastructure and model registry** (`feat/training-infra`, under $1)
 - [ ] **Step 9 — The training run** (`feat/training-run`, ~$11 to $28, the main cost)
 - [ ] **Step 10 — Comparison harness and API baselines** (`feat/comparison-harness`, ~$1 to $2)
@@ -1187,3 +1187,155 @@ generated tok/s/device, rollout 8% of step time.
 
 **Spend.** $0. Nothing billable was created, so there is no teardown to confirm. Running total
 stays $5.27 of the $20 target and $50 cap.
+
+### Step 7 — JAX training stage (`feat/jax-stage`, free)
+
+Plan approved 2026-10-14. Status: in progress.
+
+#### Context
+
+Steps 3 to 6 produced the frozen data, the scorer, and the PyTorch SFT / LoRA / DPO / GRPO code.
+CLAUDE.md's "Framework coverage (JAX/XLA)" row (decided 2026-10-09) adds one real JAX component:
+a LoRA fine-tune of a small Gemma on the same SFT data, data-parallel across the rented GPUs with
+JAX's own multi-device primitives, XLA-compiled, and profiled against the PyTorch SFT stage.
+This step writes and proves that code on CPU; it is run for real inside step 9's window.
+
+Code only. No GPU, no GCP, no API spend, no real checkpoint. **Cost: $0. Running total stays $5.27 of
+the $20 target and $50 cap.** Nothing billable is created, so there is no teardown to confirm.
+Carried to step 9 (estimate, not measured): ~0.33 to 0.67 GPU-hour on 4x A100 40GB spot, ~$3 to $6
+(compute-plan line; the E4B choice sits at the upper half of the CLAUDE.md $1-3 spot estimate, see Cost).
+
+#### What exploration found
+
+- `training/data.py` is torch-free: `encode_sft_row`, `collate`, `global_batches`, `rank_slice`,
+  `micro_batches`, `accum_steps` all work off a `Tokenizer` protocol. Only `IM_END = "<|im_end|>"`
+  is Qwen-specific. `profiling.build_profile` / `RankStats` are pure (torch imported lazily inside
+  `StepTimer` only). `scoring.schema.SystemAnswer` is the answers format. Reuse all of it.
+- Dev constraints: project is Python 3.11 (CI, pins, `target-version`); dev machine has 3.11 and 3.14,
+  CPU-only torch, no JAX. Docker (WSL2) available for Linux runs.
+- **Verified 2026-10-14 (web):** the `gemma` JAX library (google-deepmind/gemma, PyPI `gemma`
+  4.0.1, 2026-05-20) supports Gemma 4 (`gm.nn.Gemma4_E4B`, `gm.ckpts.CheckpointPath.GEMMA4_E4B_IT`),
+  depends on `jax`, `flax`, `kauldron`, `orbax-checkpoint`, and **requires Python >= 3.12**.
+  Gemma 4 (E2B, E4B, 26B A4B, 31B; 12B Unified added 2026-06-03) is listed as Apache-2.0.
+- **Not yet verified (settled in the first commit, before any design depends on it):** exact
+  `gm.nn.LoRA` usage on Gemma 4; Gemma 4 chat template / end-of-turn token; the checkpoint
+  download path and whether it needs a token or license click-through (Kaggle vs Hugging Face);
+  E4B's real parameter count (the "effective 4B" figure excludes per-layer embeddings, so the
+  weights may be larger than 4B); how the library expects sharding. Findings go in this entry.
+
+#### Decisions (confirmed with the user)
+
+1. **Model: Gemma 4 E4B** (instruction-tuned checkpoint), the 4B-class end of the locked 2B to 4B
+   range. E2B stays the named fallback if E4B memory or time does not fit the window.
+2. **Isolated Python 3.12 environment:** new `jax` extra, its own Docker image and CI job. The
+   3.11 PyTorch jobs, pins, and Ray setup are untouched.
+
+#### Design
+
+New package `src/remember_or_retrieve/jax_stage/`, PyTorch-free so it imports in the 3.12 env:
+
+- `tokenization.py`: Gemma tokenizer adapter satisfying `data.Tokenizer`; renders the same
+  `SFT_SYSTEM_PROMPT` + question through Gemma's chat format (system turn folded into the user turn
+  if the template has no system role, recorded as a note). Answer target ends with Gemma's
+  end-of-turn token so the model learns to stop. `data.encode_sft_row` currently hard-codes
+  `IM_END`; it gets an `end_token` parameter defaulting to `IM_END` (existing behaviour and tests
+  unchanged).
+- `model.py`: load Gemma 4 E4B via the `gemma` library in bf16, wrap with LoRA on the attention and
+  MLP projections (rank and alpha from config, matching the PyTorch LoRA stage where the
+  architecture allows). `tiny_model()` builds the smoke-test model: a randomly initialised
+  small-config Gemma-shaped network, real tokenizer, so no weights download in CI.
+- `parallel.py`: data parallelism with `jax.sharding` (1-D `Mesh`, batch on the `data` axis, base
+  weights replicated, LoRA params replicated, gradients mean-reduced by XLA under `jit`). No
+  `pmap`; this is the current JAX idiom and the thing worth showing.
+- `train.py`: the loop. `optax` AdamW with warmup + cosine (reuse `sft.lr_at` semantics, ported
+  as a pure function), loss normalised by the **global** target-token count, same global batch
+  (64) and gradient accumulation scheme as the PyTorch SFT, bf16 compute with fp32 LoRA masters,
+  `jax.jit` train step with donated buffers, periodic val loss, resume from an Orbax checkpoint
+  every `checkpoint_every` steps. Epochs and LR are config values, final epochs set from step 9.
+- `profiling.py`: reuses `training.profiling.RankStats` / `build_profile` so the JAX stage writes
+  the **same `profile.json` schema**: tokens/s (global, per device), step-time p50/p95, peak
+  memory per device (`device.memory_stats()`), trainable vs total params, MFU, wall-clock. Adds
+  JAX-specific fields: XLA compile time (first step, reported separately and excluded from
+  throughput), and a `jax.profiler` trace window. Timings use `block_until_ready`.
+- `checks.py`: the distribution checks, JAX versions of the CLAUDE.md requirements:
+  1. *Devices started:* `jax.device_count()` equals the requested count, one distinct device per
+     shard, process/host reported.
+  2. *Really sharded:* the batch array's sharding spans every device and each holds 1/N of it; the
+     LoRA params are replicated and **bitwise identical across devices after N steps**.
+  3. *Every GPU busy:* reuse `training.checks.GpuUtilSampler` (pynvml) on GPU runs; skipped on CPU.
+  4. *One coherent loss curve:* single global loss per step, finite and decreasing.
+  5. *Equivalence:* 2-device run matches the 1-device run on the same global batch and seed within
+     `equivalence_rel_tol`. This is the strongest proof, and the 1-device path is also the
+     single-device reference number.
+- `generate.py`: greedy decode of the 55 golden questions with the LoRA params, writing the
+  `SystemAnswer` file `scripts/score.py score` already consumes. JAX stage is thus scoreable by the
+  same judge as every PyTorch checkpoint.
+- `scripts/jax_train.py` (`train | check | generate`, `--num-devices`, `--smoke`) and a JAX row in
+  `scripts/compare_stages.py` (same table, framework column) so JAX vs PyTorch SFT-LoRA is one
+  view. Honest framing recorded in the table notes: different base model, different tokenizer,
+  so tokens/s are not a like-for-like speed claim; it demonstrates the stack and its profile.
+- Config: `compute.jax_model` set to the verified identifier; new `jax:` section (model id and
+  revision pin, LoRA r/alpha/targets, lr, epochs, batch sizes, mesh axis, smoke shape, tolerances).
+- Dependencies: new `jax` extra, exact pins verified on PyPI at implementation time:
+  `jax` (CPU wheel for smoke, `jax[cuda12]` documented for the GPU image), `flax`, `optax`,
+  `orbax-checkpoint`, `gemma==4.0.1`, `numpy`. Ray is **not** used for this stage: JAX does its
+  own multi-device parallelism, which is the point, and says so in the README.
+
+#### Tests
+
+- **Fast (existing 3.11 `test` job, no JAX needed):** `data.encode_sft_row` with a custom
+  `end_token`; config `jax:` section loads and `compute.jax_model` is set; profile schema
+  accepts the JAX fields; check logic on synthetic reports (a deliberately desynced report fails).
+- **Slow, new CI job `smoke-jax` (ubuntu, Python 3.12, `pip install -e ".[dev,jax]"`, CPU,
+  `XLA_FLAGS=--xla_force_host_platform_device_count=2` for two virtual devices) and the same
+  command in a local Docker container:** tiny-model LoRA training for a few steps on real SFT
+  slices; all checks pass; 2-device vs 1-device loss curve equivalence; params identical across
+  devices; kill-and-resume continues the same curve; `generate` output loads in `scoring`;
+  `profile.json` has the compile-time and throughput fields.
+- `ruff check` and `ruff format --check` green (ruff `target-version` stays py311; the jax package
+  avoids 3.12-only syntax so the lint config does not change).
+
+#### Security
+
+No credentials read or committed, no endpoint, no IAM, no GCP contact. Supply chain: exact pins;
+checkpoint loaded through the `gemma`/Orbax path with no `trust_remote_code` and no unpickling of
+downloaded files; checkpoint source and revision pinned. If the Gemma checkpoint needs a
+token or license acceptance, it is supplied by the user as an env var named in the plan (never
+read or printed) and needed only in step 9, not here (smoke uses a random-init model). New CI job:
+`contents: read`, no secrets.
+
+#### Cost
+
+$0 this step. Step 9 carry-forward: CLAUDE.md estimated $1-3 spot for the JAX stage, the compute
+plan 0.33-0.67 GPU-hour (~$3-6 at $8.82/hr). E4B plus XLA compile pushes toward the upper end; the
+real number comes from step 8's rehearsal. Fallback order if it runs long: fewer epochs, then E2B.
+Never the multi-device setup.
+
+#### Branch and workflow
+
+On approval: copy this plan into `docs/roadmap.md` under Step 7 and mark it in progress; branch
+`feat/jax-stage`. Small commits: verification notes + config + `jax` extra; tokenization +
+`end_token` change; tiny model + model loader; sharding; train loop; profiling; checks; generate +
+CLI; smoke tests + Dockerfile + CI job; roadmap outcome. Deviations go in the roadmap entry.
+Nothing to `main` directly.
+
+#### Verification
+
+1. `pytest`, `ruff check`, `ruff format --check` green locally and in CI (3.11 jobs unchanged).
+2. Docker 3.12 smoke suite: all five checks pass, 2-vs-1 device equivalence, resume, `generate`
+   loads in `scoring`.
+3. A deliberately broken run (one device's LoRA params perturbed) fails the identical-params check,
+   shown once.
+4. `compare_stages.py` renders the PyTorch and JAX rows from smoke profiles.
+5. Roadmap entry records the plan, the verified Gemma 4 / `gemma` facts, deviations, and
+   "Spend: $0, nothing billable, no teardown".
+
+#### Known limits (stated up front)
+
+- Real throughput, GPU memory, NCCL-over-XLA behaviour, and the GPU-busy check are only
+  measurable in step 9. The CUDA wheel and `jax[cuda12]` image path cannot be exercised on this
+  machine's CPU smoke; step 8's rehearsal should run it for a minute.
+- Different base model and tokenizer than the main stack; no claim of parity, only a profiled
+  JAX/XLA data-parallel LoRA run scored on the same golden set.
+- If any unverified item above (LoRA API, checkpoint path, E4B size) turns out to block E4B on a
+  40GB A100, the plan switches to E2B and records it as a deviation rather than silently shrinking.
