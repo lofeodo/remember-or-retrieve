@@ -62,7 +62,7 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("--out")
     c.set_defaults(fn=cmd_check)
     g = sub.add_parser("generate", help="greedy answers for the golden set, scoring format")
-    g.add_argument("--adapter", required=True)
+    g.add_argument("--adapter", required=True, help="the training run's output directory")
     g.add_argument("--out", required=True)
     g.add_argument("--smoke", action="store_true")
     g.set_defaults(fn=cmd_generate)
