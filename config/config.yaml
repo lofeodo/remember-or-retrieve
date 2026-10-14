@@ -196,15 +196,18 @@ jax:
     weight_decay: 0.0
     max_grad_norm: 1.0
     global_batch_size: 64
-    micro_batch_size: 16 # per device; grad accumulation is derived
+    micro_batch_size: 4 # per device; Gemma's 262k vocab makes fp32 logits large (B x S x 262144)
     seed: 1729
     eval_every: 50
     checkpoint_every: 100
+  pad_multiple: 64 # batch width rounded up to this, so XLA compiles few shapes
   mesh_axis: data
   profiling:
     warmup_steps: 2 # excludes the XLA compile step; compile time is reported separately
     trace_steps: 3 # jax.profiler window; 0 disables
     a100_bf16_peak_tflops: 312
+    gpu_util_sample_s: 1.0
+    min_median_gpu_util: 30 # percent, every device (GPU runs only)
   checks:
     equivalence_rel_tol: 5.0e-3 # 2-device vs 1-device loss curve
     params_identical_tol: 0.0 # LoRA params must match bitwise across devices
@@ -217,6 +220,7 @@ jax:
     head_dim: 16
     per_layer_input_dim: 16
     num_layers: 4
-    steps: 6
+    steps: 12
     rows: 96
     rank: 4
+    lr: 5.0e-3 # a random tiny model barely moves at the real lr in a dozen steps
