@@ -111,3 +111,15 @@ def test_committed_sft_and_dpo_rows_have_the_expected_shape():
     assert all(r["chosen"] != r["rejected"] for r in dpo)
     sft_cfg = cfg["training"]["sft"]
     assert sft_cfg["global_batch_size"] % sft_cfg["micro_batch_size"] == 0
+
+
+def test_custom_end_token_is_the_trained_stop_marker():
+    class GemmaFake(FakeTok):
+        def encode(self, text):
+            body = text.removesuffix("<turn|>")
+            return [ord(c) for c in body] + ([106] if text.endswith("<turn|>") else [])
+
+    ex = data.encode_sft_row(GemmaFake(), row(1, "yes"), 100, end_token="<turn|>")
+    assert ex["labels"][-1] == 106
+    assert ex["input_ids"][-1] == 106
+    assert data.encode_sft(GemmaFake(), [row(1)], 100, "<turn|>")[0]["labels"][-1] == 106
