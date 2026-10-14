@@ -46,6 +46,7 @@ jax = [
     "numpy",
     "optax==0.2.8",
     "orbax-checkpoint==0.12.7",
+    "pynvml==13.0.1",
 ]
 
 [build-system]
