@@ -1223,6 +1223,35 @@ Carried to step 9 (estimate, not measured): ~0.33 to 0.67 GPU-hour on 4x A100 40
   E4B's real parameter count (the "effective 4B" figure excludes per-layer embeddings, so the
   weights may be larger than 4B); how the library expects sharding. Findings go in this entry.
 
+#### Verified facts (recorded 2026-10-14, in a clean Python 3.12 container)
+
+Settled the "not yet verified" items above before any design depended on them.
+
+- **Stack resolved:** `gemma==4.0.1` pulls `jax 0.11.2`, `flax 0.12.10`, `optax 0.2.8`, `kauldron 1.4.4`,
+  `orbax-checkpoint 0.12.7`. Pinned in the `jax` extra.
+- **Checkpoint and tokenizer:** public GCS bucket (`gs://gemma-data/checkpoints/gemma4-e4b-it`,
+  `gs://gemma-data/tokenizers/tokenizer_gemma4.model`). The tokenizer downloaded anonymously, so **no
+  token or license click-through is needed**, which removes the "gated on Hugging Face" worry.
+- **E4B size:** 7.52B parameters in total (including the vision and audio encoders and per-layer
+  embeddings), about 15 GB in bf16. LoRA fits one A100 40GB; "effective 4B" understates the weights.
+- **Chat format:** Gemma 4 has a native system role. Rendered with `dialog`:
+  `<|turn>system
+S<turn|>
+<|turn>user
+Q<turn|>
+<|turn>model
+`, end-of-turn token `<turn|>`
+  (id 106), BOS id 2. So the system prompt is not folded into the user turn.
+- **LoRA gap in the library (changes the design):** `gm.nn.LoRA` is a **silent no-op on Gemma 4**. It
+  replaces only `nn.Dense`/`nn.Einsum`/`gm.nn._layers.Einsum`, and Gemma 4 uses its own
+  `gemma4._layers.Einsum` and `ClippedEinsum`, so wrapping a Gemma 4 model added zero parameters. The stage
+  therefore ships its own small wrapper (about 40 lines, built on `gemma.peft.ModuleInterceptor` and
+  `LoRAEinsumAdapter`); prototype verified: adapter params appear on every einsum, gradients reach them.
+  Gemma's LoRA has **no alpha** (scale fixed at 1) and no target-module selection (every einsum), so the
+  PyTorch stage's r=64/alpha=128 and module list do not map across; rank is kept and lr is tuned instead.
+- **Tiny smoke model:** `dataclasses.replace` on `gm.nn.Gemma4_E4B.config` (small dims, 4 layers, no
+  vision/audio) initialises and runs on CPU. The 262,144-token vocabulary dominates its size (33.7M).
+
 #### Decisions (confirmed with the user)
 
 1. **Model: Gemma 4 E4B** (instruction-tuned checkpoint), the 4B-class end of the locked 2B to 4B

@@ -35,6 +35,19 @@ train = [
     "transformers==5.19.0",
 ]
 
+jax = [
+    # Step 7. Needs Python >= 3.12 (gemma 4.x), so it is installed in its own environment, never
+    # alongside the 3.11 `train` extra. CPU wheels for the smoke test; the GPU image installs
+    # `jax[cuda12]` at the same version.
+    "flax==0.12.10",
+    "gemma==4.0.1",
+    "jax==0.11.2",
+    "kauldron==1.4.4",
+    "numpy",
+    "optax==0.2.8",
+    "orbax-checkpoint==0.12.7",
+]
+
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
